@@ -1,9 +1,10 @@
-## Akses server menggunakan Windows Terminal
+## 1. Akses server menggunakan Windows Terminal
 ![Gambar 1](gambar1.png)
 
 
 
-## Konfigurasi ssh agar bisa di akses hanya menggunakan publickey (password dimatikan)
+
+## 2. Konfigurasi ssh agar bisa di akses hanya menggunakan publickey (password dimatikan)
 1. masukkan perintah ssh-keygen di terminal untuk membuat kunci ssh yang nantinya akan digunakan untuk autentikasi. saya memberikan nama 'kunci' untuk key nya.
 
 ![Gambar 2](gambar2.png)
@@ -53,7 +54,8 @@
 
 ![Gambar 14](gambar14.png)
 
-## penggunaan text manipulation (grep,sed,cat, dan echo)
+
+## 3. penggunaan text manipulation (grep,sed,cat, dan echo)
 
 1. grep
 A. Menampilkan baris yang mengandung kata yang ingin dicari
@@ -141,7 +143,8 @@ C. Menambahkan Teks ke File (tidak menimpa isi file sebelumnya)
 ![Gambar 27](gambar27.png)
 
 
-## Menyalakan ufw dengan memberikan akses untuk port 22, 80, 443, 3000, 5000 dan 6969
+
+## 4. Menyalakan ufw dengan memberikan akses untuk port 22, 80, 443, 3000, 5000 dan 6969
 
 1. Aktifkan firewall dengan menggunakan perintah:
     sudo ufw enable
@@ -179,7 +182,7 @@ C. Menambahkan Teks ke File (tidak menimpa isi file sebelumnya)
     sudo netplan status
 
     ![Gambar 33](gambar33.png)
-    
+
     berdasarkan gambar diatas, ip adress berhasil dirubah dari 192.168.1.208 menjadi 192.168.1.210.
 
 

@@ -60,71 +60,71 @@ A. Menampilkan baris yang mengandung kata yang ingin dicari
     Gunakan perintah:
     grep "kata yang ingin dicari" nama_file
 
-    ![Gambar 15](gambar15.png)
+![Gambar 15](gambar15.png)
 
 B. Menampilkan nomor baris dari kata yang dicari
     Gunakan perintah:
     grep -n "kata yang ingin dicari" nama_file
 
-    ![Gambar 16](gambar16.png)
+![Gambar 16](gambar16.png)
 
 C. Menampilkan baris yang tidak mengandung kata yang dicari
     Gunakan perintah:
     grep -v "kata yang ingin dicari" nama_file
 
-    ![Gambar 17](gambar17.png)
+![Gambar 17](gambar17.png)
 
 D. Menghitung jumlah baris yang mengandung kata yang dicari
     Gunakan perintah:
     grep -c "kata yang ingin dicari" nama_file
 
-    ![Gambar 18](gambar18.png)
+![Gambar 18](gambar18.png)
 
 2. sed
 A. Mengganti Kata tanpa menyimpan perubahan asli di file
     Gunakan perintah:
     sed 's/kata_lama/kata_baru/' nama_file
 
-    ![Gambar 19](gambar19.png)
+![Gambar 19](gambar19.png)
 
 B. Mengganti kata dan menyimpan Perubahan asli di file
     Gunakan perintah :
     sed -i 's/kata_lama/kata_baru/g' nama_file
 
-    ![Gambar 20](gambar20.png)
+![Gambar 20](gambar20.png)
 
 C. Menghapus baris yang mengandung kata tertentu
     Gunakan perintah:
     sed '/kata yang ingin dihapus/d' nama_file
     (tambahkan -i jika ingin langsung menyimpan perubahan file)
 
-    ![Gambar 21](gambar21.png)
+![Gambar 21](gambar21.png)
 
 3. cat
 A. Menampilkan isi file
     Gunakan perintah:
     cat nama_file
 
-    ![Gambar 22](gambar22.png)
+![Gambar 22](gambar22.png)
 
 B. Menampilkan Isi Beberapa File
     Gunakan perintah:
     cat nama_file1 nama_file2
 
-    ![Gambar 23](gambar23.png)
+![Gambar 23](gambar23.png)
 
 C. Menggabungkan File 
     Gunakan perintah:
     cat nama_file1 nama_file2 > nama_file_baru
 
-    ![Gambar 24](gambar24.png)
+![Gambar 24](gambar24.png)
 
 4. echo
 A. Mencetak teks
     Gunakan perintah:
     echo "teks yang ingin dicetak"
 
-    ![Gambar 25](gambar25.png)
+![Gambar 25](gambar25.png)
 
 B. Menulis Teks ke file
     Gunakan perintah:
@@ -132,13 +132,13 @@ B. Menulis Teks ke file
     - jika nama_file belum ada, maka file akan dibuat
     - jika sudah ada, isi file akan ditimpa
 
-    ![Gambar 26](gambar26.png)
+![Gambar 26](gambar26.png)
 
 C. Menambahkan Teks ke File (tidak menimpa isi file sebelumnya)
     Gunakan perintah:
     echo "isi_teks" >> nama_file
 
-    ![Gambar 27](gambar27.png)
+![Gambar 27](gambar27.png)
 
 
 ## Menyalakan ufw dengan memberikan akses untuk port 22, 80, 443, 3000, 5000 dan 6969
@@ -157,6 +157,7 @@ C. Menambahkan Teks ke File (tidak menimpa isi file sebelumnya)
     sudo ufw status
 
     ![Gambar 30](gambar30.png)
+
     berdasarkan gambar diatas, port 22, 80, 443, 3000, 5000 dan 6969 telah diberikan akses.
 
 
@@ -176,8 +177,9 @@ C. Menambahkan Teks ke File (tidak menimpa isi file sebelumnya)
 
 4. cek status jaringan dengan menggunakan perintah:
     sudo netplan status
-    
+
     ![Gambar 33](gambar33.png)
+    
     berdasarkan gambar diatas, ip adress berhasil dirubah dari 192.168.1.208 menjadi 192.168.1.210.
 
 

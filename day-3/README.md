@@ -58,6 +58,7 @@
 ## 3. penggunaan text manipulation (grep,sed,cat, dan echo)
 
 1. grep
+
 A. Menampilkan baris yang mengandung kata yang ingin dicari
     Gunakan perintah:
     grep "kata yang ingin dicari" nama_file
@@ -83,6 +84,7 @@ D. Menghitung jumlah baris yang mengandung kata yang dicari
 ![Gambar 18](gambar18.png)
 
 2. sed
+
 A. Mengganti Kata tanpa menyimpan perubahan asli di file
     Gunakan perintah:
     sed 's/kata_lama/kata_baru/' nama_file
@@ -103,6 +105,7 @@ C. Menghapus baris yang mengandung kata tertentu
 ![Gambar 21](gambar21.png)
 
 3. cat
+
 A. Menampilkan isi file
     Gunakan perintah:
     cat nama_file
@@ -122,6 +125,7 @@ C. Menggabungkan File
 ![Gambar 24](gambar24.png)
 
 4. echo
+
 A. Mencetak teks
     Gunakan perintah:
     echo "teks yang ingin dicetak"

@@ -39,6 +39,22 @@ git status : melihat kondisi repositori
 
 ![Gambar 7](gambar7.png)
 
-git commit : menyimpan perubahan
+git commit : menyimpan perubahan 
 
 ![Gambar 8](gambar8.png)
+
+git push : mengirim commit dari repositori lokal/server ke repositori remote
+
+![Gambar 5](gambar5.png)
+
+git pull : mengambil perubahan terbaru dari repositori remote ke repositori lokal/server
+
+![Gambar 9](gambar9.png)
+
+## Demonstrasi mencari perubahan text pada suatu file di github
+
+1. contoh saya melakukan perubahan file1.txt dengan menggunakan nano dari yang berisi "Daffa Almaas Syakbana" menjadi "Daffa Almaas"
+
+2. setelah itu,saya gunakan perintah git diff untuk mencari file yang dirubah dan menampilkan apa yang dirubah didalam file nya
+
+![Gambar 10](gambar10.png)

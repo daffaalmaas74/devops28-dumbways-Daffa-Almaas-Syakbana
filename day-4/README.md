@@ -31,23 +31,23 @@ git merupakan sistem version control yang digunakan untuk mencatat, mengelola, d
 
 repositori dapat dikelola dengan menggunakan perintah git,seperti :
 
-git add : untuk memasukkan perubahan file sebelum dilakukan commit
+1. git add : untuk memasukkan perubahan file sebelum dilakukan commit
 
 ![Gambar 6](gambar6.png)
 
-git status : melihat kondisi repositori
+2. git status : melihat kondisi repositori
 
 ![Gambar 7](gambar7.png)
 
-git commit : menyimpan perubahan 
+3. git commit : menyimpan perubahan 
 
 ![Gambar 8](gambar8.png)
 
-git push : mengirim commit dari repositori lokal/server ke repositori remote
+4. git push : mengirim commit dari repositori lokal/server ke repositori remote
 
 ![Gambar 5](gambar5.png)
 
-git pull : mengambil perubahan terbaru dari repositori remote ke repositori lokal/server
+5. git pull : mengambil perubahan terbaru dari repositori remote ke repositori lokal/server
 
 ![Gambar 9](gambar9.png)
 

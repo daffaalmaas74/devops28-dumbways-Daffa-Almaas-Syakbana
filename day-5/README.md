@@ -78,6 +78,6 @@ Setelah berhasil mengekstrak, exit dari user root dengan menggunakan tombol ctrl
 
 ![Gambar 16](gambar16.png)
 
-5. Jalankan aplikasi dengan menggunakan perintah " go run index.go "
+5. Jalankan aplikasi dengan menggunakan perintah " go run index.go " dan buka browser lalu masukkan url http://192.168.1.208:8080/
 
 ![Gambar 17](gambar17.png)

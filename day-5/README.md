@@ -58,7 +58,7 @@ Dari gambar diatas, port menggunakan 5000.
 
 Dari gambar diatas aplikasi berhasil berjalan dan dapat dibuka melalui browser dengan menggunakan port 5000.
 
-#### 3. Deploy app menampilkan text "Golang geming!"
+#### 3. [Python] Deploy app menampilkan text "Golang geming!"
 
 1.  download installer go dengan menggunakan perintah " wget -4 https://go.dev/dl/go1.26.6.linux-amd64.tar.gz "
 

@@ -26,7 +26,7 @@
 
  ![Gambar 6](gambar6.png)
 
-##### [Python] Deploy app menampilkan text berisi nama menggunakan port 5000 & bisa dibuka melalui web
+##### 2. [Python] Deploy app menampilkan text berisi nama menggunakan port 5000 & bisa dibuka melalui web
 
 1. install package manager (pip) dengan menggunakan perintah " sudo apt install python3-pip "
 
@@ -58,7 +58,7 @@ Dari gambar diatas, port menggunakan 5000.
 
 Dari gambar diatas aplikasi berhasil berjalan dan dapat dibuka melalui browser dengan menggunakan port 5000.
 
-#### 
+#### 3. Deploy app menampilkan text "Golang geming!"
 
 1.  download installer go dengan menggunakan perintah " wget -4 https://go.dev/dl/go1.26.6.linux-amd64.tar.gz "
 

@@ -1,4 +1,4 @@
-#### Penjelasan server
+# Penjelasan server
 1. Server 1 : webserver
 2. Server 2 : bootcamp (frontend)
 3. Server 3 : backend
@@ -19,7 +19,7 @@ Login server database
 ![Gambar 4](gambar4.png)
 
 
-##### Deploy Database MySQL
+# Deploy Database MySQL
 
 1. lakukan update untuk mendapatkan pembaruan sistem server dengan perintah 'sudo apt update && sudo apt upgrade -y'
 
@@ -67,7 +67,7 @@ Login server database
 
 
 
-##### Deploy Wayshub-backend
+# Deploy Wayshub-backend
 
 1. Masuk kedalam server backend dengan SSH
 
@@ -115,7 +115,7 @@ Login server database
 
 ![Gambar 24](gambar24.png)
 
-##### Deploy Wayshub-frontend
+# Deploy Wayshub-frontend
 
 1. Masuk kedalam server bootcamp dengan SSH
 
@@ -158,7 +158,7 @@ Login server database
 ![Gambar 36](gambar36.png)
 
 
-##### Konfigurasi Domain
+# Konfigurasi Domain
 
 1. Buka cloudflare.com dan login
 
@@ -185,7 +185,7 @@ Login server database
 ![Gambar 42](gambar42.png)
 
 
-##### Konfigurasi Reverse Proxy menggunakan nginx
+# Konfigurasi Reverse Proxy menggunakan nginx
 
 1. Login SSH kedalam server webserver
 
@@ -229,7 +229,7 @@ Login server database
 
 ![Gambar 53](gambar53.png)
 
-##### Konfigurasi SSL menggunakan Certbot
+# Konfigurasi SSL menggunakan Certbot
 
 1. Login SSH ke dalam server webserver
 
@@ -262,7 +262,7 @@ Login server database
 ![Gambar 60](gambar60.png)
 
 
-##### role based MYSQL
+# role based MYSQL
 
 1. login SSH kedalam server database
 

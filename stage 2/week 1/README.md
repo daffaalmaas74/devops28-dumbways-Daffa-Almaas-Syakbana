@@ -1,8 +1,8 @@
 # Penjelasan server
-1. Server 1 : webserver
-2. Server 2 : bootcamp (frontend)
-3. Server 3 : backend
-4. Server 4 : database
+### 1. Server 1 : webserver
+### 2. Server 2 : bootcamp (frontend)
+### 3. Server 3 : backend
+### 4. Server 4 : database
 
 ### Semua server telah dibuat user baru manual bernama daffaalmaas dan sudah disetup agar tidak bisa login menggunakan password dan hanya bisa login menggunakan SSH - KEY.
 

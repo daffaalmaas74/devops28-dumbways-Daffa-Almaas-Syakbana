@@ -354,7 +354,6 @@ Role Guest
 ![Gambar 73](gambar73.png)
 
 
-
 # Remote database dari local computer menggunakan mysql-client
 
 ## 1. Buka Terminal WSL dan lakukan pembaruan sistem atau package dengan perintah " sudo apt update -y && sudo apt upgrade -y " .

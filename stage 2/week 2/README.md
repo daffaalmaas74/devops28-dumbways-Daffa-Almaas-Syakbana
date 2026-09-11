@@ -649,3 +649,7 @@ jobs:
 6. Di dalam direktori wayshub-backend, jalankan perintah git add . untuk menambahkan perubahan, kemudian git commit -m "isi commit" untuk membuat commit, dan git push origin master untuk mengirim perubahan ke repository GitHub pada branch master.
 
 7. Pada platform GitHub, buka repository wayshub-backend, kemudian pilih menu Actions. Pada halaman tersebut, dapat dilihat proses CI/CD yang berjalan dengan tahapan Pull Code → Testing → Build → push registry → deploy (+Notifikasi Discord).
+
+![Gambar 47](gambar47.png)
+
+![Gambar 48](gambar48.png)

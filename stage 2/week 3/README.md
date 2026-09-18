@@ -1,6 +1,11 @@
+# Repository Automation
+
+https://github.com/daffaalmaas74/automation.git
+
 # Penjelasan WSL
 
 Pada WSL, dilakukan instalasi ansible dan terraform.
+
 ![Gambar 1](gambar/gambar1.png)
 
 ![Gambar 7](gambar/gambar7.png)

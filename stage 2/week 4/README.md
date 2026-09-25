@@ -36,61 +36,61 @@ Aplikasi diakses melalui domain berikut:
 
 ###  1. Instalasi K3S pada VM master
 
-    1. Masuk ke dalam root dengan perintah ' sudo su '.
+1. Masuk ke dalam root dengan perintah ' sudo su '.
 
    ![Gambar 1](gambar/gambar1.png)
 
-    2. Jalankan perintah ' curl -sfL https://get.k3s.io | sh - ' untuk melakukan instalasi K3S pada server master.
+2. Jalankan perintah ' curl -sfL https://get.k3s.io | sh - ' untuk melakukan instalasi K3S pada server master.
 
    ![Gambar 2](gambar/gambar2.png)
 
-    3. Jalankan perintah ' k3s kubectl get nodes -o wide ' untuk mengecek K3s pada server master dan memastikan node master sudah berstatus Ready.
+3. Jalankan perintah ' k3s kubectl get nodes -o wide ' untuk mengecek K3s pada server master dan memastikan node master sudah berstatus Ready.
 
    ![Gambar 3](gambar/gambar3.png)
 
-    4. Jalankan perintah ' cat /var/lib/rancher/k3s/server/node-token ' pada server master untuk mengambil token yang akan digunakan pada proses instalasi dan penggabungan worker-1 ke dalam cluster K3s. Setelah token ditampilkan, copy token tersebut untuk digunakan pada proses instalasi K3s di worker-1.
+4. Jalankan perintah ' cat /var/lib/rancher/k3s/server/node-token ' pada server master untuk mengambil token yang akan digunakan pada proses instalasi dan penggabungan worker-1 ke dalam cluster K3s. Setelah token ditampilkan, copy token tersebut untuk digunakan pada proses instalasi K3s di worker-1.
 
    ![Gambar 4](gambar/gambar4.png)
 
 ###  2. Instalasi K3S pada VM worker-1
 
-    1. Masuk ke dalam root dengan perintah ' sudo su '.
+1. Masuk ke dalam root dengan perintah ' sudo su '.
 
    ![Gambar 5](gambar/gambar5.png)
 
-    2. Jalankan perintah ' curl -sfL https://get.k3s.io | K3S_URL=https://(Private IP master):6443 K3S_TOKEN='<token dari master>' sh - ' untuk menginstal K3s Agent dan menggabungkan worker-1 ke dalam cluster K3s pada server master.
+2. Jalankan perintah ' curl -sfL https://get.k3s.io | K3S_URL=https://(Private IP master):6443 K3S_TOKEN='<token dari master>' sh - ' untuk menginstal K3s Agent dan menggabungkan worker-1 ke dalam cluster K3s pada server master.
 
    ![Gambar 6](gambar/gambar6.png)
 
-    3. Jalankan ' systemctl status k3s-agent --no-pager ' untuk memastikan K3s Agent berhasil dijalankan dan berstatus active (running).
+3. Jalankan ' systemctl status k3s-agent --no-pager ' untuk memastikan K3s Agent berhasil dijalankan dan berstatus active (running).
 
    ![Gambar 7](gambar/gambar7.png)
 
-    4. Jalankan perintah ' k3s kubectl get nodes -o wide ' pada server master untuk memastikan worker-1 berhasil bergabung ke cluster K3s dan memiliki status Ready.
+4. Jalankan perintah ' k3s kubectl get nodes -o wide ' pada server master untuk memastikan worker-1 berhasil bergabung ke cluster K3s dan memiliki status Ready.
 
    ![Gambar 8](gambar/gambar8.png)
 
 ###  3. Instalasi K3S pada VM worker-2
 
-    1. Masuk ke dalam root dengan perintah ' sudo su '.
+1. Masuk ke dalam root dengan perintah ' sudo su '.
 
    ![Gambar 9](gambar/gambar9.png)
 
-    2. Jalankan perintah ' curl -sfL https://get.k3s.io | K3S_URL=https://(Private IP master):6443 K3S_TOKEN='<token dari master>' sh - ' untuk menginstal K3s Agent dan menggabungkan worker-2 ke dalam cluster K3s pada server master.
+2. Jalankan perintah ' curl -sfL https://get.k3s.io | K3S_URL=https://(Private IP master):6443 K3S_TOKEN='<token dari master>' sh - ' untuk menginstal K3s Agent dan menggabungkan worker-2 ke dalam cluster K3s pada server master.
 
    ![Gambar 10](gambar/gambar10.png)
 
-    3. Jalankan ' systemctl status k3s-agent --no-pager ' untuk memastikan K3s Agent berhasil dijalankan dan berstatus active (running).
+3. Jalankan ' systemctl status k3s-agent --no-pager ' untuk memastikan K3s Agent berhasil dijalankan dan berstatus active (running).
 
    ![Gambar 11](gambar/gambar11.png)
 
-    4. Jalankan perintah ' k3s kubectl get nodes -o wide ' pada server master untuk memastikan worker-2 berhasil bergabung ke cluster K3s dan memiliki status Ready.
+4. Jalankan perintah ' k3s kubectl get nodes -o wide ' pada server master untuk memastikan worker-2 berhasil bergabung ke cluster K3s dan memiliki status Ready.
 
    ![Gambar 12](gambar/gambar12.png)
 
 ### 4. Memberikan Label Role pada Node Worker Kubernetes
 
-    1. Pada server master, jalankan perintah ' k3s kubectl label node worker-1 node-role.kubernetes.io/worker=worker ' dan ' k3s kubectl label node worker-2 node-role.kubernetes.io/worker=worker ' untuk memberikan label worker pada worker-1 dan worker-2, sehingga kedua node tersebut dapat dikenali sebagai worker pada cluster Kubernetes.
+1. Pada server master, jalankan perintah ' k3s kubectl label node worker-1 node-role.kubernetes.io/worker=worker ' dan ' k3s kubectl label node worker-2 node-role.kubernetes.io/worker=worker ' untuk memberikan label worker pada worker-1 dan worker-2, sehingga kedua node tersebut dapat dikenali sebagai worker pada cluster Kubernetes.
 
    ![Gambar 14](gambar/gambar14.png)
 

@@ -1,0 +1,51 @@
+- name: Install K3s Server pada Master
+  hosts: master
+  become: true
+
+  tasks:
+
+    - name: Install K3s Server
+      ansible.builtin.shell:
+        cmd: curl -sfL https://get.k3s.io | sh -
+        creates: /usr/local/bin/k3s
+
+    - name: Ambil token K3s
+      ansible.builtin.slurp:
+        src: /var/lib/rancher/k3s/server/node-token
+      register: k3s_token
+
+    - name: Simpan token K3s
+      ansible.builtin.set_fact:
+        k3s_node_token: "{{ k3s_token.content | b64decode | trim }}"
+
+    - name: Berikan role master
+      ansible.builtin.command:
+        cmd: kubectl label node master node-role.kubernetes.io/master=true --overwrite
+
+
+- name: Install K3s Agent pada Worker
+  hosts: worker-1:worker-2
+  become: true
+
+  tasks:
+
+    - name: Install K3s Agent
+      ansible.builtin.shell:
+        cmd: >
+          curl -sfL https://get.k3s.io |
+          K3S_URL=https://{{ ip_master }}:6443
+          K3S_TOKEN="{{ hostvars['master']['k3s_node_token'] }}"
+          sh -
+        creates: /usr/local/bin/k3s
+
+
+- name: Berikan Role Worker
+  hosts: worker-1:worker-2
+  become: true
+
+  tasks:
+
+    - name: Berikan role worker
+      delegate_to: master
+      ansible.builtin.command:
+        cmd: kubectl label node {{ inventory_hostname }} node-role.kubernetes.io/worker=true --overwrite

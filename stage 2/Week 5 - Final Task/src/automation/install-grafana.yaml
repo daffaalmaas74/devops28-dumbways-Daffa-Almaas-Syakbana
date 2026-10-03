@@ -1,0 +1,51 @@
+- name: Install Grafana
+  hosts: monitoring
+
+  become: true
+
+  tasks:
+
+    - name: Buat directory Grafana
+      ansible.builtin.file:
+        path: "/home/{{ new_user }}/grafana"
+        state: directory
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0755"
+
+    - name: Buat directory data Grafana
+      ansible.builtin.file:
+        path: "/home/{{ new_user }}/grafana/data"
+        state: directory
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0777"
+
+    - name: Buat docker-compose.yml
+      ansible.builtin.copy:
+        dest: "/home/{{ new_user }}/grafana/docker-compose.yml"
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0644"
+        content: |
+          services:
+            grafana:
+              image: grafana/grafana:latest
+              container_name: grafana
+              restart: unless-stopped
+
+              environment:
+                GF_SERVER_ROOT_URL: "https://monitoring.daffaalmaas.studentdumbways.my.id"
+                GF_SERVER_DOMAIN: "monitoring.daffaalmaas.studentdumbways.my.id"
+                GF_SERVER_PROTOCOL: "http"
+
+              ports:
+                - "3000:3000"
+
+              volumes:
+                - ./data:/var/lib/grafana
+
+    - name: Jalankan Grafana
+      ansible.builtin.command:
+        cmd: docker compose up -d
+        chdir: "/home/{{ new_user }}/grafana"

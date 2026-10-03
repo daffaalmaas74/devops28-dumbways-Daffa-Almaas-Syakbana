@@ -1,0 +1,102 @@
+- name: Install PostgreSQL
+  hosts: database
+  become: true
+
+  vars:
+    postgresql_dir: "/home/{{ new_user }}/postgresql"
+    postgresql_volume_dir: "/home/{{ new_user }}/storage"
+    postgresql_init_dir: "{{ postgresql_dir }}/init"
+
+  tasks:
+
+    - name: Buat direktori PostgreSQL
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0755"
+      loop:
+        - "{{ postgresql_dir }}"
+        - "{{ postgresql_volume_dir }}"
+        - "{{ postgresql_init_dir }}"
+
+    - name: Buat Dockerfile PostgreSQL
+      ansible.builtin.copy:
+        dest: "{{ postgresql_dir }}/Dockerfile"
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0644"
+        content: |
+          FROM {{ postgresql_image }}
+
+          COPY init/init.sql /docker-entrypoint-initdb.d/init.sql
+
+    - name: Buat init.sql PostgreSQL
+      ansible.builtin.copy:
+        dest: "{{ postgresql_init_dir }}/init.sql"
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0644"
+        content: |
+          DO $$
+          BEGIN
+              IF NOT EXISTS (
+                  SELECT FROM pg_roles
+                  WHERE rolname = '{{ postgresql_user }}'
+              ) THEN
+                  CREATE ROLE {{ postgresql_user }}
+                  LOGIN PASSWORD '{{ postgresql_password }}';
+              ELSE
+                  ALTER ROLE {{ postgresql_user }}
+                  WITH LOGIN PASSWORD '{{ postgresql_password }}';
+              END IF;
+          END
+          $$;
+
+          CREATE DATABASE {{ postgresql_database }};
+
+          GRANT ALL PRIVILEGES ON DATABASE {{ postgresql_database }}
+          TO {{ postgresql_user }};
+
+          \connect {{ postgresql_database }}
+
+          GRANT ALL PRIVILEGES ON SCHEMA public
+          TO {{ postgresql_user }};
+
+          ALTER SCHEMA public OWNER TO {{ postgresql_user }};
+
+    - name: Buat docker-compose.yaml
+      ansible.builtin.copy:
+        dest: "{{ postgresql_dir }}/docker-compose.yaml"
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0644"
+        content: |
+          services:
+            postgresql:
+              build:
+                context: .
+                dockerfile: Dockerfile
+
+              container_name: postgresql
+              restart: unless-stopped
+
+              environment:
+                POSTGRES_PASSWORD: "{{ postgresql_root_password }}"
+
+              ports:
+                - "5432:5432"
+
+              volumes:
+                - /home/{{ new_user }}/storage:/var/lib/postgresql
+
+    - name: Build image PostgreSQL
+      ansible.builtin.command:
+        cmd: docker compose build
+        chdir: "{{ postgresql_dir }}"
+
+    - name: Jalankan PostgreSQL
+      ansible.builtin.command:
+        cmd: docker compose up -d
+        chdir: "{{ postgresql_dir }}"

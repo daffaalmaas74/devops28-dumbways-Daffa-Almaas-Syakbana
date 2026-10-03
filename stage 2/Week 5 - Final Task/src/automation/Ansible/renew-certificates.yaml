@@ -1,0 +1,36 @@
+- name: Setup Automatic SSL Certificate Renewal
+  hosts: gateway
+  become: true
+
+  vars:
+    nginx_certbot_dir: "/home/{{ new_user }}/nginx-certbot"
+
+  tasks:
+
+    - name: Buat Bash script untuk renewal certificate
+      ansible.builtin.copy:
+        content: |
+          #!/bin/bash
+
+          /usr/bin/docker run --rm \
+            -v {{ nginx_certbot_dir }}/letsencrypt:/etc/letsencrypt \
+            -v {{ nginx_certbot_dir }}/cloudflare:/etc/cloudflare:ro \
+            certbot/dns-cloudflare:latest \
+            renew \
+            --dns-cloudflare \
+            --dns-cloudflare-credentials /etc/cloudflare/cloudflare.ini \
+            --dns-cloudflare-propagation-seconds 30 \
+            --deploy-hook "/usr/bin/docker exec nginx-certbot nginx -s reload"
+
+        dest: "{{ nginx_certbot_dir }}/renew-certificates.sh"
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0755"
+
+    - name: Buat cronjob automatic renewal
+      ansible.builtin.cron:
+        name: "Renew SSL certificates"
+        user: "{{ new_user }}"
+        minute: "0"
+        hour: "3"
+        job: "{{ nginx_certbot_dir }}/renew-certificates.sh >> {{ nginx_certbot_dir }}/logs/certbot-renew.log 2>&1"

@@ -1,0 +1,17 @@
+additional-depedencies ansible_host=52.231.66.19
+
+appserver ansible_host=40.125.82.199
+
+database ansible_host=104.208.95.228
+
+gateway ansible_host=20.9.195.168
+
+jenkins ansible_host=20.194.21.16
+
+master ansible_host=20.213.139.187
+
+monitoring ansible_host=104.208.110.29
+
+worker-1 ansible_host=20.58.188.114
+
+worker-2 ansible_host=20.222.36.162

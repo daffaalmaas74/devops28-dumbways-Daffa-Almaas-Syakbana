@@ -1,0 +1,241 @@
+pipeline {
+    agent any
+
+    stages {
+
+        stage('Testing Quality Code') {
+            steps {
+                script {
+                    def scannerHome = tool 'sonar-scanner'
+
+                    withSonarQubeEnv('sonarqube') {
+                        sh """
+                            ${scannerHome}/bin/sonar-scanner \
+                                -Dsonar.projectKey=be-dumbmerch-staging \
+                                -Dsonar.sources=.
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Quality Gate') {
+            steps {
+                timeout(time: 5, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
+
+        stage('Pull Source Code') {
+            steps {
+                sshagent(['global-ssh']) {
+                    sh '''
+                        ssh -o StrictHostKeyChecking=no \
+                            -p 3333 \
+                            finaltask-daffaalmaas@40.125.82.199 << 'EOF'
+
+                        set -e
+
+                        cd /home/finaltask-daffaalmaas/be-dumbmerch
+
+                        git pull origin staging
+
+EOF
+                    '''
+                }
+            }
+        }
+
+        stage('Build Image') {
+            steps {
+                sshagent(['global-ssh']) {
+                    sh '''
+                        ssh -o StrictHostKeyChecking=no \
+                            -p 3333 \
+                            finaltask-daffaalmaas@40.125.82.199 << 'EOF'
+
+                        set -e
+
+                        cd /home/finaltask-daffaalmaas/be-dumbmerch
+
+                        docker build \
+                            -t registry.daffaalmaas.studentdumbways.my.id/be-dumbmerch:staging \
+                            .
+
+EOF
+                    '''
+                }
+            }
+        }
+
+        stage('Scan Image') {
+            steps {
+                sshagent(['global-ssh']) {
+                    sh '''
+                        ssh -o StrictHostKeyChecking=no \
+                            -p 3333 \
+                            finaltask-daffaalmaas@40.125.82.199 << 'EOF'
+
+                        set -e
+
+                        docker run --rm \
+                            -v /var/run/docker.sock:/var/run/docker.sock \
+                            aquasec/trivy:latest \
+                            image \
+                            --severity HIGH,CRITICAL \
+                            registry.daffaalmaas.studentdumbways.my.id/be-dumbmerch:staging
+
+EOF
+                    '''
+                }
+            }
+        }
+
+        stage('Push Image') {
+            steps {
+                sshagent(['global-ssh']) {
+                    withCredentials([
+                        usernamePassword(
+                            credentialsId: 'registry-credentials',
+                            usernameVariable: 'REGISTRY_USERNAME',
+                            passwordVariable: 'REGISTRY_PASSWORD'
+                        )
+                    ]) {
+                        sh """
+                            ssh -o StrictHostKeyChecking=no \
+                                -p 3333 \
+                                finaltask-daffaalmaas@40.125.82.199 << 'EOF'
+
+                            set -e
+
+                            echo "${REGISTRY_PASSWORD}" | docker login \
+                                registry.daffaalmaas.studentdumbways.my.id \
+                                -u "${REGISTRY_USERNAME}" \
+                                --password-stdin
+
+                            docker push \
+                                registry.daffaalmaas.studentdumbways.my.id/be-dumbmerch:staging
+
+EOF
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Deploy To Appserver') {
+            steps {
+                sshagent(['global-ssh']) {
+                    sh '''
+                        ssh -o StrictHostKeyChecking=no \
+                            -p 3333 \
+                            finaltask-daffaalmaas@40.125.82.199 << 'EOF'
+
+                        set -e
+
+                        cd /home/finaltask-daffaalmaas/be-dumbmerch
+
+                        docker compose up -d --no-build
+
+EOF
+                    '''
+                }
+            }
+        }
+
+        stage('Testing Running Application On Appserver') {
+            steps {
+                sshagent(['global-ssh']) {
+                    sh '''
+                        ssh -o StrictHostKeyChecking=no \
+                            -p 3333 \
+                            finaltask-daffaalmaas@40.125.82.199 << 'EOF'
+
+                        set -e
+
+                        wget \
+                            --timeout=10 \
+                            --tries=10 \
+                            --waitretry=3 \
+                            --retry-connrefused \
+                            -qO /dev/null \
+                            http://localhost:5000/api/v1/products
+
+EOF
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy To Gateway Server') {
+            steps {
+                sshagent(['global-ssh']) {
+                    withCredentials([
+                        usernamePassword(
+                            credentialsId: 'registry-credentials',
+                            usernameVariable: 'REGISTRY_USERNAME',
+                            passwordVariable: 'REGISTRY_PASSWORD'
+                        )
+                    ]) {
+                        sh """
+                            ssh -o StrictHostKeyChecking=no \
+                                -p 3333 \
+                                finaltask-daffaalmaas@20.9.195.168 << 'EOF'
+
+                            set -e
+
+                            echo "${REGISTRY_PASSWORD}" | docker login \
+                                registry.daffaalmaas.studentdumbways.my.id \
+                                -u "${REGISTRY_USERNAME}" \
+                                --password-stdin
+
+                            docker pull \
+                                registry.daffaalmaas.studentdumbways.my.id/be-dumbmerch:staging
+
+                            cd /home/finaltask-daffaalmaas/be-dumbmerch
+
+                            docker compose up -d --no-build
+
+EOF
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Testing Running Application On Gateway Server') {
+            steps {
+                sshagent(['global-ssh']) {
+                    sh '''
+                        ssh -o StrictHostKeyChecking=no \
+                            -p 3333 \
+                            finaltask-daffaalmaas@20.9.195.168 << 'EOF'
+
+                        set -e
+
+                        wget \
+                            --timeout=10 \
+                            --tries=10 \
+                            --waitretry=3 \
+                            --retry-connrefused \
+                            -qO /dev/null \
+                            http://localhost:5000/api/v1/products
+
+EOF
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo '=== CI/CD BE-DUMBMERCH:STAGING SUCCESS ==='
+        }
+
+        failure {
+            echo '=== CI/CD BE-DUMBMERCH:STAGING FAILED ==='
+        }
+    }
+}

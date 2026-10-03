@@ -1,0 +1,220 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Testing Quality Code') {
+            steps {
+                script {
+                    def scannerHome = tool 'sonar-scanner'
+
+                    withSonarQubeEnv('sonarqube') {
+                        sh """
+                            ${scannerHome}/bin/sonar-scanner \
+                                -Dsonar.projectKey=be-dumbmerch-production \
+                                -Dsonar.sources=.
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Quality Gate') {
+            steps {
+                timeout(time: 5, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
+
+        stage('Pull Source Code') {
+            steps {
+                sshagent(['global-ssh']) {
+                    sh '''
+                        ssh -o StrictHostKeyChecking=no \
+                            -p 3333 \
+                            finaltask-daffaalmaas@20.213.139.187 << 'EOF'
+
+                        set -e
+
+                        cd /home/finaltask-daffaalmaas/be-dumbmerch
+
+                        git pull origin production
+EOF
+                    '''
+                }
+            }
+        }
+
+        stage('Build Image') {
+            steps {
+                sshagent(['global-ssh']) {
+                    sh '''
+                        ssh -o StrictHostKeyChecking=no \
+                            -p 3333 \
+                            finaltask-daffaalmaas@20.213.139.187 << 'EOF'
+
+                        set -e
+
+                        cd /home/finaltask-daffaalmaas/be-dumbmerch
+
+                        docker build \
+                            -t registry.daffaalmaas.studentdumbways.my.id/be-dumbmerch:production \
+                            .
+EOF
+                    '''
+                }
+            }
+        }
+
+        stage('Scan Image') {
+            steps {
+                sshagent(['global-ssh']) {
+                    sh '''
+                        ssh -o StrictHostKeyChecking=no \
+                            -p 3333 \
+                            finaltask-daffaalmaas@20.213.139.187 << 'EOF'
+
+                        set -e
+
+                        docker run --rm \
+                            -v /var/run/docker.sock:/var/run/docker.sock \
+                            aquasec/trivy:latest \
+                            image \
+                            --severity HIGH,CRITICAL \
+                            registry.daffaalmaas.studentdumbways.my.id/be-dumbmerch:production
+EOF
+                    '''
+                }
+            }
+        }
+
+        stage('Push Image') {
+            steps {
+                sshagent(['global-ssh']) {
+                    withCredentials([
+                        usernamePassword(
+                            credentialsId: 'registry-credentials',
+                            usernameVariable: 'REGISTRY_USERNAME',
+                            passwordVariable: 'REGISTRY_PASSWORD'
+                        )
+                    ]) {
+                        sh """
+                            ssh -o StrictHostKeyChecking=no \
+                                -p 3333 \
+                                finaltask-daffaalmaas@20.213.139.187 << 'EOF'
+
+                            set -e
+
+                            echo "${REGISTRY_PASSWORD}" | docker login \
+                                registry.daffaalmaas.studentdumbways.my.id \
+                                -u "${REGISTRY_USERNAME}" \
+                                --password-stdin
+
+                            docker push \
+                                registry.daffaalmaas.studentdumbways.my.id/be-dumbmerch:production
+EOF
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Deploy To K3s Cluster') {
+            steps {
+                sshagent(['global-ssh']) {
+                    withCredentials([
+                        string(
+                            credentialsId: 'user-password',
+                            variable: 'USER_PASSWORD'
+                        )
+                    ]) {
+                        sh """
+                            ssh -o StrictHostKeyChecking=no \
+                                -p 3333 \
+                                finaltask-daffaalmaas@20.213.139.187 << 'EOF'
+
+                            set -e
+
+                            printf '%s\\n' "${USER_PASSWORD}" | sudo -S -p '' -v
+
+                            cd /home/finaltask-daffaalmaas/be-dumbmerch
+
+                            sudo kubectl apply \
+                                -f deployment.yaml \
+                                -f service.yaml
+
+                            sudo kubectl -n backend set image \
+                                deployment/be-dumbmerch \
+                                be-dumbmerch=registry.daffaalmaas.studentdumbways.my.id/be-dumbmerch:production
+
+                            sudo kubectl -n backend rollout restart \
+                                deployment/be-dumbmerch
+EOF
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Testing Running Application On K3s Cluster') {
+            steps {
+                sshagent(['global-ssh']) {
+                    withCredentials([
+                        string(
+                            credentialsId: 'user-password',
+                            variable: 'USER_PASSWORD'
+                        )
+                    ]) {
+                        sh """
+                            ssh -o StrictHostKeyChecking=no \
+                                -p 3333 \
+                                finaltask-daffaalmaas@20.213.139.187 << 'EOF'
+
+                            set -e
+
+                            printf '%s\\n' "${USER_PASSWORD}" | sudo -S -p '' -v
+
+                            sudo kubectl -n backend rollout status \
+                                deployment/be-dumbmerch \
+                                --timeout=120s
+
+                            PORT_FORWARD_LOG="/tmp/be-dumbmerch-port-forward.log"
+
+                            sudo kubectl -n backend port-forward \
+                                service/be-dumbmerch \
+                                18080:5000 \
+                                > "\${PORT_FORWARD_LOG}" 2>&1 &
+
+                            PORT_FORWARD_PID=\$!
+
+                            trap "kill \${PORT_FORWARD_PID} 2>/dev/null || true" EXIT
+
+                            sleep 5
+
+                            wget \
+                                --timeout=10 \
+                                --tries=10 \
+                                --waitretry=3 \
+                                --retry-connrefused \
+                                -qO /dev/null \
+                                http://localhost:18080/api/v1/products
+
+                            kill \${PORT_FORWARD_PID} 2>/dev/null || true
+EOF
+                        """
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo '=== CI/CD BE-DUMBMERCH:PRODUCTION SUCCESS ==='
+        }
+
+        failure {
+            echo '=== CI/CD BE-DUMBMERCH:PRODUCTION FAILED ==='
+        }
+    }
+}

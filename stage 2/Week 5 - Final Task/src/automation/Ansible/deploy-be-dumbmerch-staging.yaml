@@ -1,0 +1,89 @@
+- name: Deploy be-dumbmerch
+  hosts: appserver:gateway
+  become: true
+
+  tasks:
+
+    - name: Test koneksi SSH ke GitHub
+      ansible.builtin.command:
+        cmd: ssh -T git@github.com
+      register: github_ssh
+      changed_when: false
+      failed_when: false
+
+    - name: Clone repository branch staging
+      ansible.builtin.git:
+        repo: "{{ be_dumbmerch_repo_url }}"
+        dest: "{{ be_dumbmerch_app_dir }}"
+        version: staging
+        key_file: "/home/{{ new_user }}/.ssh/id_ed25519"
+        accept_hostkey: true
+
+    - name: Buat Dockerfile multi-stage
+      ansible.builtin.copy:
+        dest: "{{ be_dumbmerch_app_dir }}/Dockerfile"
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0644"
+        content: |
+          FROM golang:1.18-alpine AS builder
+
+          WORKDIR /app
+
+          COPY go.mod go.sum ./
+          RUN go mod download
+
+          COPY . .
+
+          RUN CGO_ENABLED=0 GOOS=linux go build -o be-dumbmerch .
+
+          FROM alpine:3.14
+
+          WORKDIR /app
+
+          RUN apk add --no-cache ca-certificates
+
+          COPY --from=builder /app/be-dumbmerch .
+          COPY --from=builder /app/.env .
+
+          EXPOSE 5000
+
+          CMD ["./be-dumbmerch"]
+
+    - name: Buat docker-compose.yaml
+      ansible.builtin.copy:
+        dest: "{{ be_dumbmerch_app_dir }}/docker-compose.yaml"
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0644"
+        content: |
+          services:
+            backend:
+              build:
+                context: .
+                dockerfile: Dockerfile
+
+              image: "{{ registry_image_backend_staging }}"
+              container_name: be-dumbmerch
+
+              restart: unless-stopped
+
+              ports:
+                - "5000:5000"
+
+    - name: Login ke private registry
+      ansible.builtin.command:
+        cmd: >
+          docker login registry.daffaalmaas.studentdumbways.my.id
+          -u "{{ registry_username }}"
+          -p "{{ registry_password }}"
+      no_log: true
+
+    - name: Build image dan jalankan container
+      ansible.builtin.command:
+        cmd: docker compose up -d --build
+        chdir: "{{ be_dumbmerch_app_dir }}"
+
+    - name: Push image ke private registry
+      ansible.builtin.command:
+        cmd: docker push {{ registry_image_backend_staging }}

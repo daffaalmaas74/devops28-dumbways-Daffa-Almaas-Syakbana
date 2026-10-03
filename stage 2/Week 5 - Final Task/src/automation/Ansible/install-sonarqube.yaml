@@ -1,0 +1,96 @@
+- name: Instalasi dan Konfigurasi SonarQube
+  hosts: additional-depedencies
+  become: true
+
+  tasks:
+    - name: Atur vm.max_map_count untuk SonarQube
+      ansible.posix.sysctl:
+        name: vm.max_map_count
+        value: "524288"
+        state: present
+        reload: true
+
+    - name: Atur fs.file-max untuk SonarQube
+      ansible.posix.sysctl:
+        name: fs.file-max
+        value: "131072"
+        state: present
+        reload: true
+
+    - name: Install ACL
+      ansible.builtin.apt:
+        name: acl
+        state: present
+        update_cache: true
+
+    - name: Buat direktori SonarQube
+      ansible.builtin.file:
+        path: "/home/{{ new_user }}/sonarqube"
+        state: directory
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0755"
+
+    - name: Buat direktori volume SonarQube
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0755"
+      loop:
+        - "/home/{{ new_user }}/sonarqube/volume"
+        - "/home/{{ new_user }}/sonarqube/volume/data"
+        - "/home/{{ new_user }}/sonarqube/volume/logs"
+        - "/home/{{ new_user }}/sonarqube/volume/extensions"
+
+    - name: Berikan permission UID 1000 ke volume SonarQube
+      ansible.posix.acl:
+        path: "{{ item }}"
+        entity: "1000"
+        etype: user
+        permissions: rwX
+        state: present
+      loop:
+        - "/home/{{ new_user }}/sonarqube/volume/data"
+        - "/home/{{ new_user }}/sonarqube/volume/logs"
+        - "/home/{{ new_user }}/sonarqube/volume/extensions"
+
+    - name: Berikan default ACL UID 1000 ke volume SonarQube
+      ansible.posix.acl:
+        path: "{{ item }}"
+        entity: "1000"
+        etype: user
+        permissions: rwX
+        default: true
+        state: present
+      loop:
+        - "/home/{{ new_user }}/sonarqube/volume/data"
+        - "/home/{{ new_user }}/sonarqube/volume/logs"
+        - "/home/{{ new_user }}/sonarqube/volume/extensions"
+
+    - name: Buat docker-compose.yml
+      ansible.builtin.copy:
+        dest: "/home/{{ new_user }}/sonarqube/docker-compose.yml"
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0644"
+        content: |
+          services:
+            sonarqube:
+              image: sonarqube:lts-community
+              container_name: sonarqube
+              restart: unless-stopped
+
+              ports:
+                - "9000:9000"
+
+              volumes:
+                - /home/{{ new_user }}/sonarqube/volume/data:/opt/sonarqube/data
+                - /home/{{ new_user }}/sonarqube/volume/logs:/opt/sonarqube/logs
+                - /home/{{ new_user }}/sonarqube/volume/extensions:/opt/sonarqube/extensions
+
+    - name: Jalankan SonarQube
+      ansible.builtin.command:
+        cmd: docker compose up -d
+        chdir: "/home/{{ new_user }}/sonarqube"

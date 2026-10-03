@@ -1,0 +1,60 @@
+- name: Install Private Docker Registry
+  hosts: additional-depedencies
+  become: true
+
+  vars:
+    registry_dir: "/home/{{ new_user }}/docker-registry-private"
+    registry_data_dir: "{{ registry_dir }}/data"
+    registry_auth_dir: "{{ registry_dir }}/auth"
+
+  tasks:
+
+    - name: Buat direktori Docker Registry
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0755"
+      loop:
+        - "{{ registry_dir }}"
+        - "{{ registry_data_dir }}"
+        - "{{ registry_auth_dir }}"
+
+    - name: Install apache2-utils
+      ansible.builtin.apt:
+        name: apache2-utils
+        state: present
+        update_cache: true
+
+    - name: Buat file authentication Registry
+      ansible.builtin.shell:
+        cmd: >
+          htpasswd -Bbn
+          "{{ registry_username }}"
+          "{{ registry_password }}"
+          > "{{ registry_auth_dir }}/htpasswd"
+      no_log: true
+
+    - name: Atur permission file authentication
+      ansible.builtin.file:
+        path: "{{ registry_auth_dir }}/htpasswd"
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0600"
+
+    - name: Jalankan Docker Registry
+      community.docker.docker_container:
+        name: registry
+        image: registry:2
+        restart_policy: unless-stopped
+        state: started
+        published_ports:
+          - "5000:5000"
+        env:
+          REGISTRY_AUTH: "htpasswd"
+          REGISTRY_AUTH_HTPASSWD_REALM: "Registry Realm"
+          REGISTRY_AUTH_HTPASSWD_PATH: "/auth/htpasswd"
+        volumes:
+          - "{{ registry_data_dir }}:/var/lib/registry"
+          - "{{ registry_auth_dir }}:/auth:ro"

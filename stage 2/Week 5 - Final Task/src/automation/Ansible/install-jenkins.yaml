@@ -1,0 +1,85 @@
+- name: Install Jenkins
+  hosts: jenkins
+  become: true
+
+  tasks:
+    - name: Buat direktori Jenkins
+      ansible.builtin.file:
+        path: "/home/{{ new_user }}/jenkins/volume"
+        state: directory
+        owner: "1000"
+        group: "1000"
+        mode: "0755"
+
+    - name: Pastikan ownership volume Jenkins
+      ansible.builtin.command:
+        cmd: chown -R 1000:1000 /home/{{ new_user }}/jenkins/volume
+
+    - name: Buat direktori SSH Jenkins
+      ansible.builtin.file:
+        path: "/home/{{ new_user }}/jenkins/volume/.ssh"
+        state: directory
+        owner: "1000"
+        group: "1000"
+        mode: "0700"
+
+    - name: Tambahkan GitHub ke known_hosts Jenkins
+      ansible.builtin.known_hosts:
+        path: "/home/{{ new_user }}/jenkins/volume/.ssh/known_hosts"
+        name: github.com
+        key: "{{ lookup('pipe', 'ssh-keyscan -t ed25519 github.com 2>/dev/null') }}"
+        state: present
+
+    - name: Atur permission known_hosts Jenkins
+      ansible.builtin.file:
+        path: "/home/{{ new_user }}/jenkins/volume/.ssh/known_hosts"
+        owner: "1000"
+        group: "1000"
+        mode: "0644"
+
+    - name: Buat docker-compose.yml
+      ansible.builtin.copy:
+        dest: "/home/{{ new_user }}/jenkins/docker-compose.yml"
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0644"
+        content: |
+          services:
+            jenkins:
+              image: jenkins/jenkins:latest
+              container_name: jenkins
+              restart: unless-stopped
+
+              ports:
+                - "8080:8080"
+
+              volumes:
+                - /home/{{ new_user }}/jenkins/volume:/var/jenkins_home
+
+    - name: Jalankan Jenkins
+      ansible.builtin.command:
+        cmd: docker compose up -d
+        chdir: "/home/{{ new_user }}/jenkins"
+
+    - name: Tunggu Jenkins siap
+      ansible.builtin.command:
+        cmd: docker exec jenkins test -f /var/jenkins_home/secrets/initialAdminPassword
+      register: jenkins_ready
+      retries: 30
+      delay: 5
+      until: jenkins_ready.rc == 0
+      changed_when: false
+
+    - name: Ambil initial admin password Jenkins
+      ansible.builtin.command:
+        cmd: docker exec jenkins cat /var/jenkins_home/secrets/initialAdminPassword
+      register: jenkins_token
+      changed_when: false
+
+    - name: Simpan initial admin password Jenkins
+      ansible.builtin.copy:
+        content: "{{ jenkins_token.stdout }}\n"
+        dest: "/home/{{ new_user }}/jenkins/token"
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0600"

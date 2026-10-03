@@ -1,0 +1,43 @@
+- name: Install Node Exporter
+  hosts: all
+
+  become: true
+
+  tasks:
+
+    - name: Buat directory Node Exporter
+      ansible.builtin.file:
+        path: "/home/{{ new_user }}/node-exporter"
+        state: directory
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0755"
+
+    - name: Buat docker-compose.yml
+      ansible.builtin.copy:
+        dest: "/home/{{ new_user }}/node-exporter/docker-compose.yml"
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0644"
+        content: |
+          services:
+            node-exporter:
+              image: prom/node-exporter:latest
+              container_name: node-exporter
+              restart: unless-stopped
+
+              ports:
+                - "9100:9100"
+
+              pid: host
+
+              volumes:
+                - "/:/host:ro,rslave"
+
+              command:
+                - "--path.rootfs=/host"
+
+    - name: Jalankan Node Exporter
+      ansible.builtin.command:
+        cmd: docker compose up -d
+        chdir: "/home/{{ new_user }}/node-exporter"

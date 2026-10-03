@@ -1,0 +1,104 @@
+- name: Buat user dan setup SSH
+  hosts: all
+  become: true
+
+  tasks:
+
+    - name: Buat user baru
+      ansible.builtin.user:
+        name: "{{ new_user }}"
+        password: "{{ new_user_password | password_hash('sha512') }}"
+        shell: /bin/bash
+        create_home: true
+        groups: sudo
+        append: true
+
+    - name: Buat direktori SSH
+      ansible.builtin.file:
+        path: "/home/{{ new_user }}/.ssh"
+        state: directory
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0700"
+
+    - name: Tambahkan SSH public key ke authorized_keys
+      ansible.posix.authorized_key:
+        user: "{{ new_user }}"
+        key: "{{ lookup('file', ssh_public_key_path) }}"
+        state: present
+        manage_dir: true
+
+    - name: Atur permission authorized_keys
+      ansible.builtin.file:
+        path: "/home/{{ new_user }}/.ssh/authorized_keys"
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0600"
+
+    - name: Tambahkan SSH private key
+      ansible.builtin.copy:
+        src: "{{ ssh_private_key_path }}"
+        dest: "/home/{{ new_user }}/.ssh/id_ed25519"
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0600"
+
+    - name: Tambahkan SSH public key
+      ansible.builtin.copy:
+        src: "{{ ssh_public_key_path }}"
+        dest: "/home/{{ new_user }}/.ssh/id_ed25519.pub"
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0644"
+
+    - name: Aktifkan password authentication di sshd_config
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^\s*#?\s*PasswordAuthentication\s+'
+        line: 'PasswordAuthentication yes'
+        state: present
+
+    - name: Aktifkan public key authentication di sshd_config
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^\s*#?\s*PubkeyAuthentication\s+'
+        line: 'PubkeyAuthentication yes'
+        state: present
+
+    - name: Ubah SSH port menjadi 3333 di sshd_config
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^\s*#?\s*Port\s+'
+        line: 'Port 3333'
+        state: present
+
+    - name: Aktifkan password authentication di 50-cloud-init.conf
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config.d/50-cloud-init.conf
+        regexp: '^\s*#?\s*PasswordAuthentication\s+'
+        line: 'PasswordAuthentication yes'
+        state: present
+
+    - name: Aktifkan public key authentication di 50-cloud-init.conf
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config.d/50-cloud-init.conf
+        regexp: '^\s*#?\s*PubkeyAuthentication\s+'
+        line: 'PubkeyAuthentication yes'
+        state: present
+
+    - name: Ubah SSH port menjadi 3333 di 50-cloud-init.conf
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config.d/50-cloud-init.conf
+        regexp: '^\s*#?\s*Port\s+'
+        line: 'Port 3333'
+        state: present
+
+    - name: Validasi konfigurasi SSH
+      ansible.builtin.command:
+        cmd: sshd -t
+      changed_when: false
+
+    - name: Restart SSH
+      ansible.builtin.service:
+        name: ssh
+        state: restarted

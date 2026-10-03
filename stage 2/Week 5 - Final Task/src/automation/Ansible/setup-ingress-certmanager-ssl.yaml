@@ -1,0 +1,330 @@
+- name: Setup Ingress NGINX, Cert-Manager, dan SSL Cloudflare
+  hosts: master
+  become: true
+
+  tasks:
+
+    - name: Buat direktori ingress-nginx
+      ansible.builtin.file:
+        path: "/home/{{ new_user }}/ingress-nginx"
+        state: directory
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0755"
+
+
+    - name: Disable Traefik K3s
+      ansible.builtin.copy:
+        dest: /etc/rancher/k3s/config.yaml
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          disable:
+            - traefik
+
+    - name: Restart K3s
+      ansible.builtin.systemd:
+        name: k3s
+        state: restarted
+        enabled: true
+
+    - name: Tunggu Kubernetes API tersedia
+      ansible.builtin.command:
+        cmd: kubectl get nodes
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: k3s_status
+      retries: 12
+      delay: 10
+      until: k3s_status.rc == 0
+      changed_when: false
+
+
+    - name: Install dependency Helm
+      ansible.builtin.apt:
+        name:
+          - curl
+        state: present
+        update_cache: true
+
+    - name: Install Helm
+      ansible.builtin.shell:
+        cmd: >
+          curl -fsSL
+          https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+          | bash
+
+
+
+    - name: Buat konfigurasi Helm ingress-nginx
+      ansible.builtin.copy:
+        dest: "/home/{{ new_user }}/ingress-nginx/ingress-nginx-values.yaml"
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0644"
+        content: |
+          controller:
+            hostNetwork: true
+
+            dnsPolicy: ClusterFirstWithHostNet
+
+            replicaCount: 1
+
+            nodeSelector:
+              kubernetes.io/hostname: master
+
+            tolerations:
+              - key: node-role.kubernetes.io/control-plane
+                operator: Exists
+                effect: NoSchedule
+
+            service:
+              enabled: false
+
+            extraArgs:
+              default-ssl-certificate: "ingress-nginx/wildcard-daffaalmaas-tls"
+
+
+    - name: Tambahkan repository Helm ingress-nginx
+      ansible.builtin.command:
+        cmd: helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+      changed_when: false
+      failed_when: false
+
+    - name: Update repository Helm
+      ansible.builtin.command:
+        cmd: helm repo update
+
+    - name: Install atau update ingress-nginx
+      ansible.builtin.command:
+        cmd: >
+          helm upgrade --install ingress-nginx
+          ingress-nginx/ingress-nginx
+          --namespace ingress-nginx
+          --create-namespace
+          --values /home/{{ new_user }}/ingress-nginx/ingress-nginx-values.yaml
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+
+    - name: Tunggu ingress-nginx siap
+      ansible.builtin.command:
+        cmd: >
+          kubectl rollout status
+          deployment/ingress-nginx-controller
+          -n ingress-nginx
+          --timeout=180s
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+
+
+    - name: Tambahkan repository Helm cert-manager
+      ansible.builtin.command:
+        cmd: helm repo add jetstack https://charts.jetstack.io
+      changed_when: false
+      failed_when: false
+
+    - name: Update repository Helm
+      ansible.builtin.command:
+        cmd: helm repo update
+
+    - name: Install atau update cert-manager
+      ansible.builtin.command:
+        cmd: >
+          helm upgrade --install cert-manager
+          jetstack/cert-manager
+          --namespace cert-manager
+          --create-namespace
+          --set crds.enabled=true
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+
+    - name: Tunggu cert-manager siap
+      ansible.builtin.command:
+        cmd: >
+          kubectl rollout status
+          deployment/cert-manager
+          -n cert-manager
+          --timeout=180s
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+
+    - name: Tunggu cert-manager webhook siap
+      ansible.builtin.command:
+        cmd: >
+          kubectl rollout status
+          deployment/cert-manager-webhook
+          -n cert-manager
+          --timeout=180s
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+
+
+    - name: Buat Secret Cloudflare API Token
+      ansible.builtin.shell:
+        cmd: |
+          kubectl create secret generic cloudflare-api-token \
+            --namespace cert-manager \
+            --from-literal=api-token="{{ cloudflare_api_token }}" \
+            --dry-run=client \
+            -o yaml |
+          kubectl apply -f -
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      no_log: true
+
+
+    - name: Buat ClusterIssuer Cloudflare
+      ansible.builtin.copy:
+        dest: "/home/{{ new_user }}/ingress-nginx/clusterissuer-cloudflare.yaml"
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0644"
+        content: |
+          apiVersion: cert-manager.io/v1
+          kind: ClusterIssuer
+          metadata:
+            name: letsencrypt-cloudflare
+          spec:
+            acme:
+              email: "{{ cloudflare_email }}"
+              server: https://acme-v02.api.letsencrypt.org/directory
+
+              privateKeySecretRef:
+                name: letsencrypt-cloudflare
+
+              solvers:
+                - dns01:
+                    cloudflare:
+                      apiTokenSecretRef:
+                        name: cloudflare-api-token
+                        key: api-token
+
+    - name: Apply ClusterIssuer Cloudflare
+      ansible.builtin.command:
+        cmd: >
+          kubectl apply
+          -f /home/{{ new_user }}/ingress-nginx/clusterissuer-cloudflare.yaml
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+
+
+    - name: Buat wildcard Certificate
+      ansible.builtin.copy:
+        dest: "/home/{{ new_user }}/ingress-nginx/wildcard-certificate.yaml"
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0644"
+        content: |
+          apiVersion: cert-manager.io/v1
+          kind: Certificate
+          metadata:
+            name: wildcard-daffaalmaas
+            namespace: ingress-nginx
+          spec:
+            secretName: wildcard-daffaalmaas-tls
+
+            issuerRef:
+              name: letsencrypt-cloudflare
+              kind: ClusterIssuer
+
+            dnsNames:
+              - daffaalmaas.studentdumbways.my.id
+              - "*.daffaalmaas.studentdumbways.my.id"
+
+    - name: Apply wildcard Certificate
+      ansible.builtin.command:
+        cmd: >
+          kubectl apply
+          -f /home/{{ new_user }}/ingress-nginx/wildcard-certificate.yaml
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+
+
+    - name: Buat Ingress frontend
+      ansible.builtin.copy:
+        dest: "/home/{{ new_user }}/ingress-nginx/frontend-ingress.yaml"
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0644"
+        content: |
+          apiVersion: networking.k8s.io/v1
+          kind: Ingress
+          metadata:
+            name: fe-dumbmerch-ingress
+            namespace: frontend
+            annotations:
+              nginx.ingress.kubernetes.io/ssl-redirect: "true"
+
+          spec:
+            ingressClassName: nginx
+
+            tls:
+              - hosts:
+                  - daffaalmaas.studentdumbways.my.id
+
+            rules:
+              - host: daffaalmaas.studentdumbways.my.id
+                http:
+                  paths:
+                    - path: /
+                      pathType: Prefix
+                      backend:
+                        service:
+                          name: fe-dumbmerch
+                          port:
+                            number: 3000
+
+    - name: Apply Ingress frontend
+      ansible.builtin.command:
+        cmd: >
+          kubectl apply
+          -f /home/{{ new_user }}/ingress-nginx/frontend-ingress.yaml
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+
+
+    - name: Buat Ingress backend
+      ansible.builtin.copy:
+        dest: "/home/{{ new_user }}/ingress-nginx/backend-ingress.yaml"
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0644"
+        content: |
+          apiVersion: networking.k8s.io/v1
+          kind: Ingress
+          metadata:
+            name: be-dumbmerch-ingress
+            namespace: backend
+            annotations:
+              nginx.ingress.kubernetes.io/ssl-redirect: "true"
+
+          spec:
+            ingressClassName: nginx
+
+            tls:
+              - hosts:
+                  - api.daffaalmaas.studentdumbways.my.id
+
+            rules:
+              - host: api.daffaalmaas.studentdumbways.my.id
+                http:
+                  paths:
+                    - path: /
+                      pathType: Prefix
+                      backend:
+                        service:
+                          name: be-dumbmerch
+                          port:
+                            number: 5000
+
+    - name: Apply Ingress backend
+      ansible.builtin.command:
+        cmd: >
+          kubectl apply
+          -f /home/{{ new_user }}/ingress-nginx/backend-ingress.yaml
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml

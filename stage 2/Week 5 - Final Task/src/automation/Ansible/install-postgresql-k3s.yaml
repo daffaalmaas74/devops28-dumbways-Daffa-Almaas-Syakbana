@@ -1,0 +1,203 @@
+- name: Deploy PostgreSQL pada K3s
+  hosts: master
+  become: true
+
+  tasks:
+
+    - name: Buat direktori PostgreSQL
+      ansible.builtin.file:
+        path: "/home/{{ new_user }}/postgresql"
+        state: directory
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0755"
+
+    - name: Buat namespace database
+      ansible.builtin.shell:
+        cmd: |
+          kubectl create namespace database \
+          --dry-run=client -o yaml | kubectl apply -f -
+
+    - name: Buat Secret PostgreSQL
+      ansible.builtin.copy:
+        dest: "/home/{{ new_user }}/postgresql/secret.yaml"
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0600"
+        content: |
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: postgresql-secret
+            namespace: database
+          type: Opaque
+          stringData:
+            POSTGRES_PASSWORD: "{{ postgresql_root_password }}"
+            POSTGRES_USER: "{{ postgresql_user }}"
+            POSTGRES_DB: "{{ postgresql_database }}"
+
+    - name: Apply Secret PostgreSQL
+      ansible.builtin.command:
+        cmd: kubectl apply -f /home/{{ new_user }}/postgresql/secret.yaml
+
+    - name: Buat ConfigMap init PostgreSQL
+      ansible.builtin.copy:
+        dest: "/home/{{ new_user }}/postgresql/init.yaml"
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0644"
+        content: |
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: postgresql-init
+            namespace: database
+          data:
+            init.sql: |
+              DO $$
+              BEGIN
+                  IF NOT EXISTS (
+                      SELECT FROM pg_roles
+                      WHERE rolname = '{{ postgresql_user }}'
+                  ) THEN
+                      CREATE ROLE {{ postgresql_user }}
+                      LOGIN PASSWORD '{{ postgresql_password }}';
+                  ELSE
+                      ALTER ROLE {{ postgresql_user }}
+                      WITH LOGIN PASSWORD '{{ postgresql_password }}';
+                  END IF;
+              END
+              $$;
+
+              CREATE DATABASE {{ postgresql_database }};
+
+              GRANT ALL PRIVILEGES ON DATABASE {{ postgresql_database }}
+              TO {{ postgresql_user }};
+
+              \connect {{ postgresql_database }}
+
+              GRANT ALL PRIVILEGES ON SCHEMA public
+              TO {{ postgresql_user }};
+
+              ALTER SCHEMA public OWNER TO {{ postgresql_user }};
+
+    - name: Apply ConfigMap init PostgreSQL
+      ansible.builtin.command:
+        cmd: kubectl apply -f /home/{{ new_user }}/postgresql/init.yaml
+
+    - name: Buat PersistentVolumeClaim PostgreSQL
+      ansible.builtin.copy:
+        dest: "/home/{{ new_user }}/postgresql/pvc.yaml"
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0644"
+        content: |
+          apiVersion: v1
+          kind: PersistentVolumeClaim
+          metadata:
+            name: postgresql-pvc
+            namespace: database
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 10Gi
+
+    - name: Apply PersistentVolumeClaim PostgreSQL
+      ansible.builtin.command:
+        cmd: kubectl apply -f /home/{{ new_user }}/postgresql/pvc.yaml
+
+    - name: Buat Deployment PostgreSQL
+      ansible.builtin.copy:
+        dest: "/home/{{ new_user }}/postgresql/deployment.yaml"
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0644"
+        content: |
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: postgresql
+            namespace: database
+          spec:
+            replicas: 1
+            selector:
+              matchLabels:
+                app: postgresql
+            template:
+              metadata:
+                labels:
+                  app: postgresql
+              spec:
+                containers:
+                  - name: postgresql
+                    image: "{{ postgresql_image }}"
+
+                    ports:
+                      - containerPort: 5432
+
+                    env:
+                      - name: POSTGRES_PASSWORD
+                        valueFrom:
+                          secretKeyRef:
+                            name: postgresql-secret
+                            key: POSTGRES_PASSWORD
+
+                      - name: POSTGRES_USER
+                        valueFrom:
+                          secretKeyRef:
+                            name: postgresql-secret
+                            key: POSTGRES_USER
+
+                      - name: POSTGRES_DB
+                        valueFrom:
+                          secretKeyRef:
+                            name: postgresql-secret
+                            key: POSTGRES_DB
+
+                    volumeMounts:
+                      - name: postgresql-storage
+                        mountPath: /var/lib/postgresql
+
+                      - name: postgresql-init
+                        mountPath: /docker-entrypoint-initdb.d/init.sql
+                        subPath: init.sql
+
+                volumes:
+                  - name: postgresql-storage
+                    persistentVolumeClaim:
+                      claimName: postgresql-pvc
+
+                  - name: postgresql-init
+                    configMap:
+                      name: postgresql-init
+
+    - name: Apply Deployment PostgreSQL
+      ansible.builtin.command:
+        cmd: kubectl apply -f /home/{{ new_user }}/postgresql/deployment.yaml
+
+    - name: Buat Service PostgreSQL
+      ansible.builtin.copy:
+        dest: "/home/{{ new_user }}/postgresql/service.yaml"
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0644"
+        content: |
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: postgresql
+            namespace: database
+          spec:
+            selector:
+              app: postgresql
+            ports:
+              - protocol: TCP
+                port: 5432
+                targetPort: 5432
+            type: ClusterIP
+
+    - name: Apply Service PostgreSQL
+      ansible.builtin.command:
+        cmd: kubectl apply -f /home/{{ new_user }}/postgresql/service.yaml

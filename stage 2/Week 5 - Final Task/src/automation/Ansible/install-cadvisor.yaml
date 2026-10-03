@@ -1,0 +1,42 @@
+- name: Install cAdvisor
+  hosts: all
+
+  become: true
+
+  tasks:
+
+    - name: Buat directory cAdvisor
+      ansible.builtin.file:
+        path: "/home/{{ new_user }}/cadvisor"
+        state: directory
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0755"
+
+    - name: Buat docker-compose.yml cAdvisor
+      ansible.builtin.copy:
+        dest: "/home/{{ new_user }}/cadvisor/docker-compose.yml"
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0644"
+        content: |
+          services:
+            cadvisor:
+              image: gcr.io/cadvisor/cadvisor:latest
+              container_name: cadvisor
+              restart: unless-stopped
+
+              ports:
+                - "8081:8080"
+
+              volumes:
+                - /:/rootfs:ro
+                - /var/run:/var/run:ro
+                - /sys:/sys:ro
+                - /var/lib/docker/:/var/lib/docker:ro
+                - /dev/disk/:/dev/disk:ro
+
+    - name: Jalankan cAdvisor
+      community.docker.docker_compose_v2:
+        project_src: "/home/{{ new_user }}/cadvisor"
+        state: present

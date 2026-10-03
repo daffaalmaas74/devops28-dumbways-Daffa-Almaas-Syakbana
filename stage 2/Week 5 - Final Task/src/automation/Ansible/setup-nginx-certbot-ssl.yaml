@@ -1,0 +1,333 @@
+- name: Install Nginx Certbot Reverse Proxy
+  hosts: gateway
+  become: true
+
+  vars:
+    nginx_certbot_dir: "/home/{{ new_user }}/nginx-certbot"
+    certbot_cert_name: "wildcard"
+
+  tasks:
+
+    - name: Buat direktori nginx-certbot
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0755"
+      loop:
+        - "{{ nginx_certbot_dir }}"
+        - "{{ nginx_certbot_dir }}/nginx"
+        - "{{ nginx_certbot_dir }}/nginx/reverse-proxy"
+        - "{{ nginx_certbot_dir }}/letsencrypt"
+        - "{{ nginx_certbot_dir }}/cloudflare"
+        - "{{ nginx_certbot_dir }}/logs"
+
+    - name: Buat Dockerfile Nginx
+      ansible.builtin.copy:
+        content: |
+          FROM nginx:latest
+        dest: "{{ nginx_certbot_dir }}/Dockerfile"
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0644"
+
+    - name: Buat Cloudflare credentials
+      ansible.builtin.copy:
+        content: |
+          dns_cloudflare_api_token = {{ cloudflare_api_token }}
+        dest: "{{ nginx_certbot_dir }}/cloudflare/cloudflare.ini"
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0600"
+
+    - name: Buat nginx.conf
+      ansible.builtin.copy:
+        content: |
+          user nginx;
+          worker_processes auto;
+
+          error_log /var/log/nginx/error.log warn;
+          pid /var/run/nginx.pid;
+
+          events {
+              worker_connections 1024;
+          }
+
+          http {
+              server_names_hash_bucket_size 128;
+
+              include /etc/nginx/mime.types;
+              default_type application/octet-stream;
+
+              sendfile on;
+              keepalive_timeout 65;
+
+              include /etc/nginx/reverse-proxy/*;
+          }
+        dest: "{{ nginx_certbot_dir }}/nginx/nginx.conf"
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0644"
+
+    - name: Buat konfigurasi reverse proxy
+      ansible.builtin.copy:
+        content: |
+          server {
+              listen 80;
+              server_name {{ item.domain }};
+
+              location / {
+                  return 301 https://$host$request_uri;
+              }
+          }
+
+          server {
+              listen 443 ssl;
+              server_name {{ item.domain }};
+
+              client_max_body_size 0;
+
+              ssl_certificate /etc/letsencrypt/live/{{ certbot_cert_name }}/fullchain.pem;
+              ssl_certificate_key /etc/letsencrypt/live/{{ certbot_cert_name }}/privkey.pem;
+
+              location / {
+                  proxy_pass {{ item.upstream }};
+                  proxy_http_version 1.1;
+
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+              }
+          }
+        dest: "{{ nginx_certbot_dir }}/nginx/reverse-proxy/{{ item.domain }}"
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0644"
+      loop:
+        - domain: exporter-additional-depedencies.daffaalmaas.studentdumbways.my.id
+          upstream: http://52.231.66.19:9100
+
+        - domain: exporter-appserver.daffaalmaas.studentdumbways.my.id
+          upstream: http://40.125.82.199:9100
+
+        - domain: exporter-database.daffaalmaas.studentdumbways.my.id
+          upstream: http://104.208.95.228:9100
+
+        - domain: exporter-gateway.daffaalmaas.studentdumbways.my.id
+          upstream: http://20.9.195.168:9100
+
+        - domain: exporter-jenkins.daffaalmaas.studentdumbways.my.id
+          upstream: http://20.194.21.16:9100
+
+        - domain: exporter-monitoring.daffaalmaas.studentdumbways.my.id
+          upstream: http://104.208.110.29:9100
+
+        - domain: exporter-master.daffaalmaas.studentdumbways.my.id
+          upstream: http://20.213.139.187:9100
+
+        - domain: exporter-worker-1.daffaalmaas.studentdumbways.my.id
+          upstream: http://20.58.188.114:9100
+
+        - domain: exporter-worker-2.daffaalmaas.studentdumbways.my.id
+          upstream: http://20.222.36.162:9100
+
+        - domain: prom.daffaalmaas.studentdumbways.my.id
+          upstream: http://104.208.110.29:9090
+
+        - domain: monitoring.daffaalmaas.studentdumbways.my.id
+          upstream: http://104.208.110.29:3000
+
+        - domain: registry.daffaalmaas.studentdumbways.my.id
+          upstream: http://52.231.66.19:5000
+
+        - domain: sonarqube.daffaalmaas.studentdumbways.my.id
+          upstream: http://52.231.66.19:9000
+
+    - name: Buat konfigurasi reverse proxy Jenkins
+      ansible.builtin.copy:
+        content: |
+          server {
+              listen 80;
+              server_name jenkins.daffaalmaas.studentdumbways.my.id;
+
+              location / {
+                  return 301 https://$host$request_uri;
+              }
+          }
+
+          server {
+              listen 443 ssl;
+              server_name jenkins.daffaalmaas.studentdumbways.my.id;
+
+              client_max_body_size 0;
+
+              ssl_certificate /etc/letsencrypt/live/{{ certbot_cert_name }}/fullchain.pem;
+              ssl_certificate_key /etc/letsencrypt/live/{{ certbot_cert_name }}/privkey.pem;
+
+              location / {
+                  proxy_pass http://20.194.21.16:8080;
+
+                  proxy_http_version 1.1;
+
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto https;
+                  proxy_set_header X-Forwarded-Host $host;
+                  proxy_set_header X-Forwarded-Port 443;
+
+                  proxy_set_header Upgrade $http_upgrade;
+                  proxy_set_header Connection "upgrade";
+
+                  proxy_buffering off;
+
+                  proxy_request_buffering off;
+
+                  proxy_read_timeout 90s;
+                  proxy_send_timeout 90s;
+              }
+          }
+        dest: "{{ nginx_certbot_dir }}/nginx/reverse-proxy/jenkins.daffaalmaas.studentdumbways.my.id"
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0644"
+
+    - name: Buat konfigurasi staging load balancer
+      ansible.builtin.copy:
+        content: |
+          upstream staging_upstream {
+              server 40.125.82.199:3000;
+              server 104.208.95.228:3000;
+          }
+
+          server {
+              listen 80;
+              server_name staging.daffaalmaas.studentdumbways.my.id;
+
+              location / {
+                  return 301 https://$host$request_uri;
+              }
+          }
+
+          server {
+              listen 443 ssl;
+              server_name staging.daffaalmaas.studentdumbways.my.id;
+
+              ssl_certificate /etc/letsencrypt/live/{{ certbot_cert_name }}/fullchain.pem;
+              ssl_certificate_key /etc/letsencrypt/live/{{ certbot_cert_name }}/privkey.pem;
+
+              location / {
+                  proxy_pass http://staging_upstream;
+                  proxy_http_version 1.1;
+
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+              }
+          }
+        dest: "{{ nginx_certbot_dir }}/nginx/reverse-proxy/staging.daffaalmaas.studentdumbways.my.id"
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0644"
+
+    - name: Buat konfigurasi API staging load balancer
+      ansible.builtin.copy:
+        content: |
+          upstream api_staging_upstream {
+              server 40.125.82.199:5000;
+              server 20.9.195.168:5000;
+          }
+
+          server {
+              listen 80;
+              server_name api.staging.daffaalmaas.studentdumbways.my.id;
+
+              location / {
+                  return 301 https://$host$request_uri;
+              }
+          }
+
+          server {
+              listen 443 ssl;
+              server_name api.staging.daffaalmaas.studentdumbways.my.id;
+
+              ssl_certificate /etc/letsencrypt/live/{{ certbot_cert_name }}/fullchain.pem;
+              ssl_certificate_key /etc/letsencrypt/live/{{ certbot_cert_name }}/privkey.pem;
+
+              location / {
+                  proxy_pass http://api_staging_upstream;
+                  proxy_http_version 1.1;
+
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+              }
+          }
+        dest: "{{ nginx_certbot_dir }}/nginx/reverse-proxy/api.staging.daffaalmaas.studentdumbways.my.id"
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0644"
+
+    - name: Build image Nginx
+      community.docker.docker_image:
+        name: nginx-certbot
+        build:
+          path: "{{ nginx_certbot_dir }}"
+        source: build
+
+    - name: Generate wildcard SSL certificate
+      community.docker.docker_container:
+        name: certbot-wildcard
+        image: certbot/dns-cloudflare:latest
+        command:
+          - certonly
+          - --dns-cloudflare
+          - --dns-cloudflare-credentials
+          - /etc/cloudflare/cloudflare.ini
+          - --dns-cloudflare-propagation-seconds
+          - "30"
+          - --non-interactive
+          - --agree-tos
+          - --email
+          - "{{ certbot_email }}"
+          - --cert-name
+          - "{{ certbot_cert_name }}"
+          - -d
+          - "*.{{ certbot_domain }}"
+          - -d
+          - "*.staging.{{ certbot_domain }}"
+        volumes:
+          - "{{ nginx_certbot_dir }}/letsencrypt:/etc/letsencrypt"
+          - "{{ nginx_certbot_dir }}/cloudflare:/etc/cloudflare:ro"
+        state: started
+        detach: false
+        cleanup: true
+
+    - name: Jalankan Nginx
+      community.docker.docker_container:
+        name: nginx-certbot
+        image: nginx-certbot:latest
+        restart_policy: unless-stopped
+        state: started
+        published_ports:
+          - "80:80"
+          - "443:443"
+        volumes:
+          - "{{ nginx_certbot_dir }}/nginx/nginx.conf:/etc/nginx/nginx.conf:ro"
+          - "{{ nginx_certbot_dir }}/nginx/reverse-proxy:/etc/nginx/reverse-proxy:ro"
+          - "{{ nginx_certbot_dir }}/letsencrypt:/etc/letsencrypt:ro"
+          - "{{ nginx_certbot_dir }}/logs:/var/log/nginx"
+
+    - name: Test konfigurasi Nginx
+      community.docker.docker_container_exec:
+        container: nginx-certbot
+        command: nginx -t
+
+    - name: Reload Nginx
+      community.docker.docker_container_exec:
+        container: nginx-certbot
+        command: nginx -s reload

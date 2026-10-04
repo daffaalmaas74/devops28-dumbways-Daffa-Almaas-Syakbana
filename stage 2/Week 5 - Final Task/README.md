@@ -1,24 +1,28 @@
 # Stage 2 Week 5 - Final Task
 
+## Penjelasan Server
+
+   ![Image 128](src/images/image128.png)
+
 ### 1. Provisioning
 
 1. Di WSL, buat dua direktori bernama kubernetes-server dan server di dalam direktori automation/Terraform/azure.
 
 2. Di dalam direktori kubernetes-server, buat tiga file Terraform, yaitu main.tf yang digunakan untuk mendefinisikan resource dan infrastruktur yang akan dibuat, providers.tf yang berfungsi untuk menentukan serta mengatur provider yang digunakan, yaitu Azure, dan variables.tf yang digunakan untuk mendefinisikan variabel.
 
-3. Pada file [main.tf](src/automation/terraform/kubernetes-server/main.tf) berisikan 
+3. Pada file [main.tf](src/automation/terraform/kubernetes-server/main.tf) berisikan konfigurasi infrastruktur Azure untuk membangun cluster Kubernetes yang terdiri dari satu master dan dua worker. Master dan worker-1 ditempatkan pada Australia East dalam satu Virtual Network (VNet), sedangkan worker-2 ditempatkan pada Japan East dengan VNet terpisah. Setiap server dilengkapi dengan Network Security Group (NSG), Public IP, Network Interface (NIC), serta managed data disk. Untuk memungkinkan komunikasi jaringan antara cluster di Australia East dan worker-2 di Japan East, kedua VNet dihubungkan menggunakan VNet Peering dua arah. Konfigurasi ini memungkinkan node Kubernetes tetap dapat saling berkomunikasi meskipun berada pada region Azure yang berbeda.
 
-4. Pada file [variables.tf](src/automation/terraform/kubernetes-server/variables.tf) berisikan 
+4. Pada file [variables.tf](src/automation/terraform/kubernetes-server/variables.tf) berisikan definisi variabel yang digunakan untuk mengatur konfigurasi infrastruktur Azure secara terpusat. Variabel tersebut mencakup nama Resource Group, lokasi deployment di Australia East, konfigurasi VNet dan subnet, Network Security Group (NSG), username server, ukuran Virtual Machine menggunakan Standard_B2als_v2, lokasi SSH public key, jenis storage Standard_LRS, ukuran data disk sebesar 10 GB, serta konfigurasi caching ReadWrite. Dengan menggunakan variabel ini, konfigurasi pada main.tf menjadi lebih fleksibel dan mudah disesuaikan tanpa perlu mengubah resource secara langsung.
 
-5. Pada file [providers.tf](src/automation/terraform/kubernetes-server/variables.tf) berisikan 
+5. Pada file [providers.tf](src/automation/terraform/kubernetes-server/providers.tf) berisikan  konfigurasi AzureRM digunakan untuk menghubungkan Terraform dengan Azure dan mengelola resource di dalamnya.
 
 6. Di dalam direktori server, buat tiga file Terraform, yaitu main.tf yang digunakan untuk mendefinisikan resource dan infrastruktur yang akan dibuat, providers.tf yang berfungsi untuk menentukan serta mengatur provider yang digunakan, yaitu Azure, dan variables.tf yang digunakan untuk mendefinisikan variabel.
 
-7. Pada file [main.tf](src/automation/terraform/server/main.tf) berisikan 
+7. Pada file [main.tf](src/automation/terraform/server/main.tf) berisikan konfigurasi infrastruktur Azure untuk membangun beberapa server di berbagai region. Konfigurasi ini mencakup Resource Group, VNet, Subnet, NSG, Public IP, NIC, Virtual Machine, serta managed data disk. Penggunaan for_each memungkinkan resource dibuat secara otomatis berdasarkan daftar region dan server yang telah ditentukan.
 
-8. Pada file [variables.tf](src/automation/terraform/server/variables.tf) berisikan
+8. Pada file [variables.tf](src/automation/terraform/server/variables.tf) berisikan konfigurasi region dan server yang akan digunakan dalam infrastruktur Azure. Terdapat tiga region, yaitu West US 2, East Asia, dan Korea Central, dengan konfigurasi VNet, Subnet, dan NSG masing-masing. Selain itu, file ini mendefinisikan enam server yaitu appserver, gateway, database, monitoring, jenkins, dan additional-depedencies, serta konfigurasi ukuran VM, username, SSH key, dan penyimpanan data disk.
 
-9. Pada file [providers.tf](src/automation/terraform/server/providers.tf) berisikan
+9. Pada file [providers.tf](src/automation/terraform/server/providers.tf) berisikan konfigurasi AzureRM digunakan untuk menghubungkan Terraform dengan Azure dan mengelola resource di dalamnya.
 
 10. Didalam direktori kubernetes-server, Jalankan perintah ' terraform validate ' untuk memeriksa konfigurasi Terraform sebelum diterapkan.
 

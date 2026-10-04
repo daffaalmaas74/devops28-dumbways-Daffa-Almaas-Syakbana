@@ -1,4 +1,4 @@
-- name: Install Prometheus with Docker Compose
+- name: Install Prometheus
   hosts: monitoring
   become: true
 

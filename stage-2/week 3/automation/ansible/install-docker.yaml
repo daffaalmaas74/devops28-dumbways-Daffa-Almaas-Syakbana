@@ -1,0 +1,248 @@
+---
+- name: Install Docker di Ubuntu dan Debian
+  hosts: all
+  become: true
+
+  tasks:
+
+    - name: Install dependency Docker Ubuntu
+      ansible.builtin.apt:
+        name:
+          - ca-certificates
+          - curl
+          - gnupg
+        state: present
+        update_cache: true
+      when:
+        - ansible_facts['distribution'] == 'Ubuntu'
+
+
+    - name: Buat direktori Docker keyrings Ubuntu
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+      when:
+        - ansible_facts['distribution'] == 'Ubuntu'
+
+
+    - name: Download Docker GPG key Ubuntu
+      ansible.builtin.get_url:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        dest: /etc/apt/keyrings/docker.asc
+        owner: root
+        group: root
+        mode: "0644"
+      when:
+        - ansible_facts['distribution'] == 'Ubuntu'
+
+
+    - name: Tambahkan Docker repository Ubuntu
+      ansible.builtin.apt_repository:
+        repo: >-
+          deb [signed-by=/etc/apt/keyrings/docker.asc]
+          https://download.docker.com/linux/ubuntu
+          {{ ansible_facts['distribution_release'] }} stable
+        filename: docker
+        state: present
+        update_cache: true
+      when:
+        - ansible_facts['distribution'] == 'Ubuntu'
+
+
+    - name: Install Docker Ubuntu
+      ansible.builtin.apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        state: present
+        update_cache: true
+      when:
+        - ansible_facts['distribution'] == 'Ubuntu'
+
+
+
+    - name: Ganti repository Debian 11 ke Debian Archive
+      ansible.builtin.copy:
+        dest: /etc/apt/sources.list
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          deb http://archive.debian.org/debian bullseye main
+      when:
+        - ansible_facts['distribution'] == 'Debian'
+        - ansible_facts['distribution_major_version'] == '11'
+
+
+    - name: Nonaktifkan pemeriksaan Valid-Until Debian Archive
+      ansible.builtin.copy:
+        dest: /etc/apt/apt.conf.d/99no-check-valid-until
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          Acquire::Check-Valid-Until "false";
+      when:
+        - ansible_facts['distribution'] == 'Debian'
+        - ansible_facts['distribution_major_version'] == '11'
+
+
+    - name: Update repository Debian 11
+      ansible.builtin.apt:
+        update_cache: true
+      when:
+        - ansible_facts['distribution'] == 'Debian'
+        - ansible_facts['distribution_major_version'] == '11'
+
+
+    - name: Install dependency Docker Debian
+      ansible.builtin.apt:
+        name:
+          - nftables
+        state: present
+      when:
+        - ansible_facts['distribution'] == 'Debian'
+        - ansible_facts['distribution_major_version'] == '11'
+
+
+    - name: Buat directory temporary Docker Debian
+      ansible.builtin.file:
+        path: /tmp/docker-deb
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+      when:
+        - ansible_facts['distribution'] == 'Debian'
+        - ansible_facts['distribution_major_version'] == '11'
+
+
+    - name: Download containerd.io Debian
+      ansible.builtin.get_url:
+        url: https://download.docker.com/linux/debian/dists/bullseye/pool/stable/amd64/containerd.io_2.3.4-2~debian.11~bullseye_amd64.deb
+        dest: /tmp/docker-deb/containerd.io.deb
+        owner: root
+        group: root
+        mode: "0644"
+      when:
+        - ansible_facts['distribution'] == 'Debian'
+        - ansible_facts['distribution_major_version'] == '11'
+
+
+    - name: Download Docker CE Debian
+      ansible.builtin.get_url:
+        url: https://download.docker.com/linux/debian/dists/bullseye/pool/stable/amd64/docker-ce_29.8.0-1~debian.11~bullseye_amd64.deb
+        dest: /tmp/docker-deb/docker-ce.deb
+        owner: root
+        group: root
+        mode: "0644"
+      when:
+        - ansible_facts['distribution'] == 'Debian'
+        - ansible_facts['distribution_major_version'] == '11'
+
+
+    - name: Download Docker CE CLI Debian
+      ansible.builtin.get_url:
+        url: https://download.docker.com/linux/debian/dists/bullseye/pool/stable/amd64/docker-ce-cli_29.8.0-1~debian.11~bullseye_amd64.deb
+        dest: /tmp/docker-deb/docker-ce-cli.deb
+        owner: root
+        group: root
+        mode: "0644"
+      when:
+        - ansible_facts['distribution'] == 'Debian'
+        - ansible_facts['distribution_major_version'] == '11'
+
+
+    - name: Download Docker Buildx plugin Debian
+      ansible.builtin.get_url:
+        url: https://download.docker.com/linux/debian/dists/bullseye/pool/stable/amd64/docker-buildx-plugin_0.37.0-1~debian.11~bullseye_amd64.deb
+        dest: /tmp/docker-deb/docker-buildx-plugin.deb
+        owner: root
+        group: root
+        mode: "0644"
+      when:
+        - ansible_facts['distribution'] == 'Debian'
+        - ansible_facts['distribution_major_version'] == '11'
+
+
+    - name: Download Docker Compose plugin Debian
+      ansible.builtin.get_url:
+        url: https://download.docker.com/linux/debian/dists/bullseye/pool/stable/amd64/docker-compose-plugin_5.5.1-1~debian.11~bullseye_amd64.deb
+        dest: /tmp/docker-deb/docker-compose-plugin.deb
+        owner: root
+        group: root
+        mode: "0644"
+      when:
+        - ansible_facts['distribution'] == 'Debian'
+        - ansible_facts['distribution_major_version'] == '11'
+
+
+
+    - name: Install containerd.io Debian
+      ansible.builtin.command:
+        cmd: dpkg -i /tmp/docker-deb/containerd.io.deb
+      register: containerd_install
+      changed_when: "'Setting up' in containerd_install.stdout"
+      when:
+        - ansible_facts['distribution'] == 'Debian'
+        - ansible_facts['distribution_major_version'] == '11'
+
+
+    - name: Install Docker CE CLI Debian
+      ansible.builtin.command:
+        cmd: dpkg -i /tmp/docker-deb/docker-ce-cli.deb
+      register: docker_cli_install
+      changed_when: "'Setting up' in docker_cli_install.stdout"
+      when:
+        - ansible_facts['distribution'] == 'Debian'
+        - ansible_facts['distribution_major_version'] == '11'
+
+
+    - name: Install Docker CE Debian
+      ansible.builtin.command:
+        cmd: dpkg -i /tmp/docker-deb/docker-ce.deb
+      register: docker_ce_install
+      changed_when: "'Setting up' in docker_ce_install.stdout"
+      when:
+        - ansible_facts['distribution'] == 'Debian'
+        - ansible_facts['distribution_major_version'] == '11'
+
+
+    - name: Install Docker Buildx plugin Debian
+      ansible.builtin.command:
+        cmd: dpkg -i /tmp/docker-deb/docker-buildx-plugin.deb
+      register: buildx_install
+      changed_when: "'Setting up' in buildx_install.stdout"
+      when:
+        - ansible_facts['distribution'] == 'Debian'
+        - ansible_facts['distribution_major_version'] == '11'
+
+
+    - name: Install Docker Compose plugin Debian
+      ansible.builtin.command:
+        cmd: dpkg -i /tmp/docker-deb/docker-compose-plugin.deb
+      register: compose_install
+      changed_when: "'Setting up' in compose_install.stdout"
+      when:
+        - ansible_facts['distribution'] == 'Debian'
+        - ansible_facts['distribution_major_version'] == '11'
+
+
+    - name: Aktifkan dan jalankan Docker
+      ansible.builtin.systemd:
+        name: docker
+        enabled: true
+        state: started
+
+
+    - name: Tambahkan user ke group Docker
+      ansible.builtin.user:
+        name: "{{ new_user }}"
+        groups: docker
+        append: true

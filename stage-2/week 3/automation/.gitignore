@@ -1,0 +1,40 @@
+# ==========================================
+
+# Terraform
+
+# ==========================================
+
+# Terraform provider files
+
+Terraform/azure/.terraform/
+Terraform/azure/additional-server/.terraform/
+
+# Terraform state files
+
+**/*.tfstate
+**/*.tfstate.*
+
+# ==========================================
+
+# Ansible
+
+# ==========================================
+
+# Ansible credentials
+
+Ansible/group_vars/all
+
+# Ansible retry files
+
+*.retry
+
+# ==========================================
+
+# Secrets
+
+# ==========================================
+
+.env
+.env.*
+*.pem
+*.key

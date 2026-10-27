@@ -6,9 +6,9 @@ https://github.com/daffaalmaas74/automation.git
 
 Pada WSL, dilakukan instalasi ansible dan terraform.
 
-![Gambar 1](gambar/gambar1.png)
+![Gambar 1](images/gambar1.png)
 
-![Gambar 7](gambar/gambar7.png)
+![Gambar 7](images/gambar7.png)
 
 
 # Penjelasan Server
@@ -34,11 +34,11 @@ Seluruh layanan dijalankan di atas Docker dan proses instalasi serta konfigurasi
 
 1. Pastikan sudah menginstal Terraform dan azure CLI pada WSL.
 
-![Gambar 2](gambar/gambar2.png)
+![Gambar 2](images/gambar2.png)
 
 2. Pastikan juga sudah login ke Azure CLI.
 
-![Gambar 3](gambar/gambar3.png)
+![Gambar 3](images/gambar3.png)
 
 3. Pada WSL, buat struktur direktori berikut:
 
@@ -48,7 +48,7 @@ automation/
 
 4. Didalam direktori azure buat file bernama providers.tf yang berguna untuk menentukan provider yang digunakan oleh Terraform untuk berkomunikasi dengan platform atau layanan yang akan dikelola. Isi file berikut seperti gambar dibawah.
 
-![Gambar 4](gambar/gambar4.png)
+![Gambar 4](images/gambar4.png)
 
 5. Jalankan perintah ' terraform init ' untuk membaca konfigurasi provider dan mengunduh AzureRM provider yang dibutuhkan oleh project Terraform.
 
@@ -309,7 +309,7 @@ automation/
 
 12. Buat file providers.tf. Isi file seperti gambar dibawah.
 
-![Gambar 5](gambar/gambar5.png)
+![Gambar 5](images/gambar5.png)
 
 13. Jalankan perintah ' terraform init ' untuk membaca konfigurasi provider dan mengunduh AzureRM provider yang dibutuhkan oleh project Terraform.
 
@@ -568,7 +568,7 @@ automation/
 
 19. Jalankan perintah ' az resource list --output table ' untuk melihat seluruh resource yang telah dibuat pada semua Resource Group di Azure beserta nama, Resource Group, lokasi, dan jenis resource.
 
-![Gambar 6](gambar/gambar6.png)
+![Gambar 6](images/gambar6.png)
 
 20. Berdasarkan hasil pengecekan menggunakan az resource list --output table, berhasil dibuat 4 VM, 2 Resource Group, 2 VNet, 2 NSG, 4 NIC, 4 Public IP, dan 4 data disk. Seluruh resource memiliki status Succeeded, yang menunjukkan bahwa proses pembuatan resource di Azure berhasil dilakukan.
 
@@ -584,19 +584,19 @@ automation/
 
 1. Didalam direktori Ansible,buat file bernama Inventory untuk mendaftarkan server yang akan dikelola oleh Ansible serta mengelompokkannya berdasarkan jenis server. Isi file seperti pada gambar dibawah.
 
-![Gambar 8](gambar/gambar8.png)
+![Gambar 8](images/gambar8.png)
 
 2. Buat file bernama ansible.cfg untuk menyimpan konfigurasi utama Ansible, sehingga Ansible mengetahui inventory yang digunakan dan cara melakukan koneksi ke server. Isi file seperti pada gambar dibawah.
 
-![Gambar 9](gambar/gambar9.png)
+![Gambar 9](images/gambar9.png)
 
 3. Didalam direktori group_vars, buat file bernama all untuk menyimpan variable Ansible yang digunakan secara bersama oleh seluruh server yang terdapat di Inventory. Isi file seperti pada gambar dibawah.
 
-![Gambar 10](gambar/gambar10.png)
+![Gambar 10](images/gambar10.png)
 
 4. di dalam direktori Ansible,buat file bernama create-user.yaml yang berfungsi sebagai Ansible Playbook untuk mengotomatisasi pembuatan dan konfigurasi user baru pada seluruh server yang terdapat di Inventory. Playbook ini membuat user dengan akses sudo, membuat direktori .ssh, menambahkan SSH public key untuk autentikasi, mengaktifkan password authentication dan public key authentication pada konfigurasi SSH, kemudian melakukan restart layanan SSH agar seluruh perubahan konfigurasi diterapkan. Isi file seperti pada gambar dibawah.
 
-![Gambar 11](gambar/gambar11.png)
+![Gambar 11](images/gambar11.png)
 
 5. Jalankan perintah ansible-playbook create-user.yaml untuk menjalankan seluruh proses sesuai dengan konfigurasi yang telah didefinisikan pada playbook create-user.yaml.
 
@@ -1413,37 +1413,37 @@ automation/
 
 20. Pada cloudflare, tambahkan DNS Record seperti pada gambar dibawah.
 
-![Gambar 12](gambar/gambar12.png)
+![Gambar 12](images/gambar12.png)
 
 21. Setelah reverse proxy dikonfigurasi, beberapa layanan berikut dapat diakses melalui URL masing-masing:
      1. Node Exporter pada setiap server:
          1. ubuntu-server-1: https://exporter-ubuntu-1-daffaalmaas.studentdumbways.my.id/
 
-        ![Gambar 13](gambar/gambar13.png)
+        ![Gambar 13](images/gambar13.png)
 
          2. ubuntu-server-2: https://exporter-ubuntu-2-daffaalmaas.studentdumbways.my.id/
 
-        ![Gambar 14](gambar/gambar14.png)
+        ![Gambar 14](images/gambar14.png)
 
          3. ubuntu-server-3: https://exporter-ubuntu-3-daffaalmaas.studentdumbways.my.id/
 
-        ![Gambar 15](gambar/gambar15.png)
+        ![Gambar 15](images/gambar15.png)
 
          4. debian-server-1: https://exporter-debian-1-daffaalmaas.studentdumbways.my.id/
 
-        ![Gambar 16](gambar/gambar16.png)
+        ![Gambar 16](images/gambar16.png)
 
      2. Prometheus pada debian-server-1: https://prom-daffaalmaas.studentdumbways.my.id/
 
-        ![Gambar 17](gambar/gambar17.png)
+        ![Gambar 17](images/gambar17.png)
 
      3. Grafana pada debian-server-1: https://monitoring-daffaalmaas.studentdumbways.my.id/
 
-        ![Gambar 18](gambar/gambar18.png)
+        ![Gambar 18](images/gambar18.png)
 
      4. Aplikasi wayshub-frontend pada ubuntu-server-1: https://daffaalmaas.studentdumbways.my.id/
 
-        ![Gambar 19](gambar/gambar19.png)
+        ![Gambar 19](images/gambar19.png)
 
 
 # Dashboard Grafana
@@ -1474,7 +1474,7 @@ automation/
 
 query ini menghitung persentase penggunaan disk pada root filesystem / untuk setiap server yang dimonitor oleh Node Exporter, dengan mengecualikan filesystem tmpfs, overlay, dan squashfs.
 
-![Gambar 20](gambar/gambar20.png)
+![Gambar 20](images/gambar20.png)
 
 4. Buat panel baru dengan nama CPU usage, lalu pilih tipe visualisasi 'Gauge'. Pada bagian Standard options, atur unit menjadi 'Percent (0-100)'', kemudian masukkan nilai min 0 dan max 100. Setelah itu, tambahkan query PromQL berikut:
         100 * (
@@ -1486,7 +1486,7 @@ query ini menghitung persentase penggunaan disk pada root filesystem / untuk set
     
 Query ini menghitung persentase penggunaan CPU setiap server dengan mengambil rata-rata CPU idle selama 5 menit terakhir, kemudian mengubahnya menjadi persentase CPU yang digunakan.
 
-![Gambar 21](gambar/gambar21.png)
+![Gambar 21](images/gambar21.png)
 
 5. Buat panel baru dengan nama RAM usage, lalu pilih tipe visualisasi 'Gauge'. Pada bagian Standard options, atur unit menjadi 'Percent (0-100)'', kemudian masukkan nilai min 0 dan max 100. Setelah itu, tambahkan query PromQL berikut:
 
@@ -1505,7 +1505,7 @@ Query ini menghitung persentase penggunaan CPU setiap server dengan mengambil ra
 
 Query ini menghitung persentase penggunaan RAM pada masing-masing server, dengan membandingkan RAM yang tersedia (MemAvailable) dengan total RAM (MemTotal), kemudian hasilnya dikelompokkan berdasarkan server.
 
-![Gambar 22](gambar/gambar22.png)
+![Gambar 22](images/gambar22.png)
 
 # alerting dengan Contact Point Discord
 
@@ -1515,7 +1515,7 @@ Query ini menghitung persentase penggunaan RAM pada masing-masing server, dengan
 
 2. Masukkan nama Contact Point, pilih 'Discord' pada bagian Integration, lalu masukkan URL webhook Discord.
 
-![Gambar 34](gambar/gambar34.png)
+![Gambar 34](images/gambar34.png)
 
 3. Klik save contact point untuk menyimpan.
 
@@ -1525,7 +1525,7 @@ Query ini menghitung persentase penggunaan RAM pada masing-masing server, dengan
 
 2. isi enter alert rule name(CPU Usage)
 
-![Gambar 23](gambar/gambar23.png)
+![Gambar 23](images/gambar23.png)
 
 3. pada define query and alert condition, masukan query promQL berikut :
 
@@ -1543,29 +1543,29 @@ Query ini menghitung persentase penggunaan RAM pada masing-masing server, dengan
 
 Pada bagian Alert condition, atur kondisi agar alert aktif ketika nilai query lebih dari 20. Setelah itu, jalankan Preview alert rule condition untuk melihat hasilnya.
 
-![Gambar 24](gambar/gambar24.png)
+![Gambar 24](images/gambar24.png)
 
 4. Pada bagian Add Folder and Labels buat folder baru bernama server monitoring.
 
-![Gambar 25](gambar/gambar25.png)
+![Gambar 25](images/gambar25.png)
 
 5. Pada bagian set evaluation behavior, buat elevation grup baru bernama server monitoring.Setelah itu, pada pending priod pilih 5m dan keep firing for pilih none.
 
-![Gambar 26](gambar/gambar26.png)
+![Gambar 26](images/gambar26.png)
 
 6. Pada bagian configure notifications, pilih contact point discord.
 
-![Gambar 27](gambar/gambar27.png)
+![Gambar 27](images/gambar27.png)
 
 7. Pada bagian configure notification message, isi kolom summary seperti pada gambar dibawah.
 
-![Gambar 28](gambar/gambar28.png)
+![Gambar 28](images/gambar28.png)
 
 8. Klik save untuk menyimpan alert rule.
 
 9. Alert rule berhasil diterapkan dan notifikasi dikirim ke discord jika CPU Usage > 20%.
 
-![Gambar 29](gambar/gambar29.png)
+![Gambar 29](images/gambar29.png)
 
 ## RAM Usage 
 
@@ -1573,7 +1573,7 @@ Pada bagian Alert condition, atur kondisi agar alert aktif ketika nilai query le
 
 2. isi enter alert rule name(RAM Usage)
 
-![Gambar 30](gambar/gambar30.png)
+![Gambar 30](images/gambar30.png)
 
 3. pada define query and alert condition, masukan query promQL berikut :
 
@@ -1591,26 +1591,26 @@ Pada bagian Alert condition, atur kondisi agar alert aktif ketika nilai query le
 
 Pada bagian Alert condition, atur kondisi agar alert aktif ketika nilai query lebih dari 75. Setelah itu, jalankan Preview alert rule condition untuk melihat hasilnya.
 
-![Gambar 31](gambar/gambar31.png)
+![Gambar 31](images/gambar31.png)
 
 4. Pada bagian Add Folder and Labels pilih folder baru bernama server monitoring.
 
-![Gambar 25](gambar/gambar25.png)
+![Gambar 25](images/gambar25.png)
 
 5. Pada bagian set evaluation behavior, pilih elevation grup baru bernama server monitoring.Setelah itu, pada pending priod pilih 5m dan keep firing for pilih none.
 
-![Gambar 26](gambar/gambar26.png)
+![Gambar 26](images/gambar26.png)
 
 6. Pada bagian configure notifications, pilih contact point discord.
 
-![Gambar 27](gambar/gambar27.png)
+![Gambar 27](images/gambar27.png)
 
 7. Pada bagian configure notification message, isi kolom summary seperti pada gambar dibawah.
 
-![Gambar 32](gambar/gambar32.png)
+![Gambar 32](images/gambar32.png)
 
 8. Klik save untuk menyimpan alert rule.
 
 9. Alert rule berhasil diterapkan dan notifikasi dikirim ke discord jika RAM Usage > 75 %.
 
-![Gambar 33](gambar/gambar33.png)
+![Gambar 33](images/gambar33.png)

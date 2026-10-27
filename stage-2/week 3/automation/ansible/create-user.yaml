@@ -1,0 +1,62 @@
+- name: Buat user dan setup SSH
+  hosts: all
+  become: true
+
+  tasks:
+
+    - name: Buat user baru
+      ansible.builtin.user:
+        name: "{{ new_user }}"
+        password: "{{ new_user_password | password_hash('sha512') }}"
+        shell: /bin/bash
+        create_home: true
+        groups: sudo
+        append: true
+
+    - name: Buat direktori SSH
+      ansible.builtin.file:
+        path: "/home/{{ new_user }}/.ssh"
+        state: directory
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0700"
+
+    - name: Tambahkan SSH public key
+      ansible.posix.authorized_key:
+        user: "{{ new_user }}"
+        key: "{{ ssh_public_key }}"
+        state: present
+        manage_dir: true
+
+    - name: Aktifkan password authentication di sshd_config
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^\s*#?\s*PasswordAuthentication\s+'
+        line: 'PasswordAuthentication yes'
+        state: present
+
+    - name: Aktifkan public key authentication di sshd_config
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^\s*#?\s*PubkeyAuthentication\s+'
+        line: 'PubkeyAuthentication yes'
+        state: present
+
+    - name: Aktifkan password authentication di 50-cloud-init.conf
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config.d/50-cloud-init.conf
+        regexp: '^\s*#?\s*PasswordAuthentication\s+'
+        line: 'PasswordAuthentication yes'
+        state: present
+
+    - name: Aktifkan public key authentication di 50-cloud-init.conf
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config.d/50-cloud-init.conf
+        regexp: '^\s*#?\s*PubkeyAuthentication\s+'
+        line: 'PubkeyAuthentication yes'
+        state: present
+
+    - name: Restart SSH
+      ansible.builtin.service:
+        name: ssh
+        state: restarted

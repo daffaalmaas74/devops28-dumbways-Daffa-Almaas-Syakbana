@@ -1,0 +1,206 @@
+- name: Install Nginx dan Certbot dengan Docker Compose
+  hosts: ubuntu-server-2
+
+  vars:
+    ansible_user: "{{ new_user }}"
+    ansible_become_password: "{{ new_user_password }}"
+
+    nginx_dir: "/home/{{ new_user }}/nginx"
+    certbot_dir: "/home/{{ new_user }}/certbot"
+
+    reverse_proxies:
+      - domain: prom-daffaalmaas.studentdumbways.my.id
+        target: http://20.92.92.134:9090
+
+      - domain: monitoring-daffaalmaas.studentdumbways.my.id
+        target: http://20.92.92.134:3000
+
+      - domain: daffaalmaas.studentdumbways.my.id
+        target: http://20.5.122.76:3000
+
+      - domain: exporter-ubuntu-1-daffaalmaas.studentdumbways.my.id
+        target: http://20.5.122.76:9100
+
+      - domain: exporter-ubuntu-2-daffaalmaas.studentdumbways.my.id
+        target: http://52.253.96.31:9100
+
+      - domain: exporter-ubuntu-3-daffaalmaas.studentdumbways.my.id
+        target: http://20.48.112.177:9100
+
+      - domain: exporter-debian-1-daffaalmaas.studentdumbways.my.id
+        target: http://20.92.92.134:9100
+
+  become: true
+
+  tasks:
+
+    - name: Buat directory Nginx
+      ansible.builtin.file:
+        path: "{{ nginx_dir }}"
+        state: directory
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0755"
+
+    - name: Buat directory reverse proxy
+      ansible.builtin.file:
+        path: "{{ nginx_dir }}/reverse-proxy"
+        state: directory
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0755"
+
+    - name: Buat directory Certbot
+      ansible.builtin.file:
+        path: "{{ certbot_dir }}/{{ item }}"
+        state: directory
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "{{ '0700' if item == 'secrets' else '0755' }}"
+      loop:
+        - letsencrypt
+        - lib
+        - log
+        - secrets
+
+    - name: Buat Cloudflare credentials
+      ansible.builtin.copy:
+        dest: "{{ certbot_dir }}/secrets/cloudflare.ini"
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0600"
+        content: |
+          dns_cloudflare_api_token = {{ cloudflare_api_token }}
+
+    - name: Buat nginx.conf
+      ansible.builtin.copy:
+        dest: "{{ nginx_dir }}/nginx.conf"
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0644"
+        content: |
+          events {}
+
+          http {
+            include /etc/nginx/mime.types;
+            default_type application/octet-stream;
+
+            server_names_hash_bucket_size 128;
+
+            sendfile on;
+            keepalive_timeout 65;
+
+            include /etc/nginx/reverse-proxy/*;
+          }
+
+    - name: Buat docker-compose.yml Nginx
+      ansible.builtin.copy:
+        dest: "{{ nginx_dir }}/docker-compose.yml"
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0644"
+        content: |
+          services:
+            nginx:
+              image: nginx:latest
+              container_name: nginx
+              restart: unless-stopped
+
+              ports:
+                - "80:80"
+                - "443:443"
+
+              volumes:
+                - ./nginx.conf:/etc/nginx/nginx.conf:ro
+                - ./reverse-proxy:/etc/nginx/reverse-proxy:ro
+                - ../certbot/letsencrypt:/etc/letsencrypt:ro
+
+    - name: Buat docker-compose.yml Certbot
+      ansible.builtin.copy:
+        dest: "{{ certbot_dir }}/docker-compose.yml"
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0644"
+        content: |
+          services:
+            certbot:
+              image: certbot/dns-cloudflare:latest
+              container_name: certbot
+              restart: "no"
+
+              volumes:
+                - ./letsencrypt:/etc/letsencrypt
+                - ./lib:/var/lib/letsencrypt
+                - ./log:/var/log/letsencrypt
+                - ./secrets:/secrets:ro
+
+              command: >
+                certonly
+                --dns-cloudflare
+                --dns-cloudflare-credentials /secrets/cloudflare.ini
+                --dns-cloudflare-propagation-seconds 30
+                --email {{ cloudflare_email }}
+                --agree-tos
+                --no-eff-email
+                --non-interactive
+                --keep-until-expiring
+                -d studentdumbways.my.id
+                -d "*.studentdumbways.my.id"
+
+    - name: Jalankan Certbot
+      ansible.builtin.command:
+        cmd: docker compose run --rm certbot
+        chdir: "{{ certbot_dir }}"
+
+    - name: Buat konfigurasi SSL reverse proxy
+      ansible.builtin.copy:
+        dest: "{{ nginx_dir }}/reverse-proxy/{{ item.domain }}"
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0644"
+        content: |
+          server {
+            listen 80;
+            server_name {{ item.domain }};
+
+            return 301 https://$host$request_uri;
+          }
+
+          server {
+            listen 443 ssl;
+            server_name {{ item.domain }};
+
+            ssl_certificate /etc/letsencrypt/live/studentdumbways.my.id/fullchain.pem;
+            ssl_certificate_key /etc/letsencrypt/live/studentdumbways.my.id/privkey.pem;
+
+            location / {
+              proxy_pass {{ item.target }};
+              proxy_set_header Host $host;
+              proxy_set_header X-Real-IP $remote_addr;
+              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+              proxy_set_header X-Forwarded-Proto $scheme;
+            }
+          }
+      loop: "{{ reverse_proxies }}"
+
+    - name: Test konfigurasi Nginx sebelum dijalankan
+      ansible.builtin.command:
+        cmd: docker compose run --rm nginx nginx -t
+        chdir: "{{ nginx_dir }}"
+
+    - name: Recreate dan jalankan Nginx
+      ansible.builtin.command:
+        cmd: docker compose up -d --force-recreate
+        chdir: "{{ nginx_dir }}"
+
+    - name: Pastikan container Nginx berjalan
+      ansible.builtin.command:
+        cmd: docker inspect -f {% raw %}'{{.State.Status}}'{% endraw %} nginx
+      register: nginx_status
+      changed_when: false
+      failed_when: nginx_status.stdout.strip() != "running"
+
+    - name: Reload Nginx
+      ansible.builtin.command:
+        cmd: docker exec nginx nginx -s reload
+      changed_when: true

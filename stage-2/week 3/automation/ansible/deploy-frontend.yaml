@@ -1,0 +1,84 @@
+- name: Deploy Wayshub Frontend
+  hosts: ubuntu-server-1
+
+  vars:
+    ansible_user: "{{ new_user }}"
+    ansible_become_password: "{{ new_user_password }}"
+
+  become: true
+
+  tasks:
+
+    - name: Clone repository Wayshub Frontend
+      ansible.builtin.git:
+        repo: https://github.com/dumbwaysdev/wayshub-frontend.git
+        dest: "/home/{{ new_user }}/wayshub-frontend"
+        version: main
+        update: true
+      become: false
+
+    - name: Buat ecosystem.config.js
+      ansible.builtin.copy:
+        dest: "/home/{{ new_user }}/wayshub-frontend/ecosystem.config.js"
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0644"
+        content: |
+          module.exports = {
+            apps: [
+              {
+                name: "wayshub-frontend",
+                script: "npm",
+                args: "start",
+                env: {
+                  NODE_ENV: "development",
+                  HOST: "0.0.0.0",
+                  PORT: 3000
+                }
+              }
+            ]
+          }
+
+
+    - name: Buat Dockerfile
+      ansible.builtin.copy:
+        dest: "/home/{{ new_user }}/wayshub-frontend/Dockerfile"
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0644"
+        content: |
+          FROM node:14-alpine
+
+          WORKDIR /app
+
+          COPY . .
+
+          RUN npm install
+          RUN npm install -g pm2
+
+          EXPOSE 3000
+
+          CMD ["pm2-runtime", "start", "ecosystem.config.js"]
+
+    - name: Buat docker-compose.yml
+      ansible.builtin.copy:
+        dest: "/home/{{ new_user }}/wayshub-frontend/docker-compose.yml"
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0644"
+        content: |
+          services:
+            frontend:
+              image: daffaalmaas/74wayshub-frontend
+              build: .
+              container_name: frontend
+              ports:
+                - "3000:3000"
+              restart: unless-stopped
+
+
+    - name: Jalankan Docker Compose
+      ansible.builtin.command:
+        cmd: docker compose up -d
+        chdir: "/home/{{ new_user }}/wayshub-frontend"
+      become: true
